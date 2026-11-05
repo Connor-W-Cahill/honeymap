@@ -3,19 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🍯 HoneyMap</title>
+  <title>HoneyMap</title>
 
-  <!-- Leaflet -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
+    :root {
+      --bg:        #070B14;
+      --surface:   #0C1220;
+      --surface2:  #111827;
+      --border:    #1a2440;
+      --border2:   #243050;
+      --text:      #C8D8F0;
+      --text-dim:  #4A6080;
+      --text-mid:  #7A96B8;
+      --green:     #00FF9C;
+      --green-dim: #00CC7A;
+      --red:       #FF3B30;
+      --amber:     #FFB340;
+      --blue:      #4D9FFF;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Inter', system-ui, sans-serif;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #0d1117;
-      color: #c9d1d9;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -26,277 +45,395 @@
     header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 8px 20px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
+      gap: 16px;
+      padding: 0 20px;
+      height: 42px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
-    header h1 { font-size: 1.15rem; color: #f0883e; }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .logo-mark svg { display: block; }
+    header h1 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
     #ws-status {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: var(--text-mid);
     }
     #ws-dot {
-      width: 10px; height: 10px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: #f85149;
-      transition: background 0.3s;
+      background: var(--red);
+      transition: background 0.4s;
     }
-    #ws-dot.connected { background: #3fb950; }
+    #ws-dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 4px var(--green); }
+      50%       { box-shadow: 0 0 10px var(--green); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #ws-dot.connected { animation: none; }
+    }
 
     /* ── Stats strip ── */
     #stats-strip {
       display: flex;
-      gap: 0;
-      background: #0d1117;
-      border-bottom: 1px solid #30363d;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .stat-cell {
       flex: 1;
-      padding: 6px 14px;
-      border-right: 1px solid #30363d;
-      font-size: 0.78rem;
+      padding: 10px 20px;
+      border-right: 1px solid var(--border);
     }
     .stat-cell:last-child { border-right: none; }
-    .stat-label { color: #8b949e; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.04em; }
-    .stat-value { color: #f0883e; font-weight: 700; font-size: 0.95rem; margin-top: 1px; }
+    .stat-label {
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--green);
+      line-height: 1;
+    }
 
     /* ── Main grid ── */
     main {
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: #30363d;
+      gap: 0;
       overflow: hidden;
     }
 
     .panel {
-      background: #0d1117;
+      background: var(--bg);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      border-right: 1px solid var(--border);
     }
+    .panel:last-child { border-right: none; }
 
-    .panel-header {
-      padding: 8px 16px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      font-size: 0.82rem;
+    .panel-title {
+      padding: 9px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.72rem;
       font-weight: 600;
-      color: #8b949e;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      color: var(--text-mid);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .panel-title .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--green);
       flex-shrink: 0;
     }
 
-    /* ── Left: Scanner ── */
-    #scan-form, #discover-form {
+    /* ── Forms ── */
+    .tool-row {
       display: flex;
       gap: 8px;
-      padding: 10px 16px;
+      padding: 10px 14px;
       flex-shrink: 0;
-      border-bottom: 1px solid #30363d;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
     }
-    #scan-host, #discover-subnet {
+    .tool-input {
       flex: 1;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #c9d1d9;
-      padding: 5px 10px;
-      font-size: 0.88rem;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 6px 10px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    #scan-host:focus, #discover-subnet:focus { outline: none; border-color: #f0883e; }
-    #scan-btn {
-      background: #f0883e;
+    .tool-input:focus { border-color: var(--blue); }
+    .tool-input::placeholder { color: var(--text-dim); }
+
+    .btn-primary {
+      background: var(--green);
       border: none;
-      border-radius: 6px;
-      color: #0d1117;
-      font-weight: 700;
-      padding: 5px 14px;
-      cursor: pointer;
-      font-size: 0.88rem;
-    }
-    #scan-btn:hover { background: #e07730; }
-    #scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    #discover-btn {
-      background: #1f6feb;
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-weight: 700;
-      padding: 5px 14px;
-      cursor: pointer;
-      font-size: 0.88rem;
-    }
-    #discover-btn:hover { background: #1a5cc8; }
-    #discover-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    #discover-status { padding: 3px 16px 4px; font-size: 0.76rem; color: #8b949e; flex-shrink: 0; min-height: 18px; }
-    .discover-scan-btn {
-      background: none; border: 1px solid #30363d; border-radius: 4px;
-      color: #f0883e; cursor: pointer; font-size: 0.72rem; padding: 1px 6px;
-    }
-    .discover-scan-btn:hover { background: #21262d; }
-
-    #scan-status {
-      padding: 3px 16px 6px;
-      font-size: 0.76rem;
-      color: #8b949e;
-      flex-shrink: 0;
-      min-height: 20px;
-    }
-
-    /* ── Webhook config ── */
-    #webhook-form {
-      display: flex;
-      gap: 8px;
-      padding: 8px 16px;
-      flex-shrink: 0;
-      border-top: 1px solid #30363d;
-    }
-    #webhook-url {
-      flex: 1;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #c9d1d9;
-      padding: 4px 8px;
+      color: var(--bg);
+      font-family: var(--sans);
+      font-weight: 600;
       font-size: 0.78rem;
-    }
-    #webhook-url::placeholder { color: #484f58; }
-    #webhook-url:focus { outline: none; border-color: #8b949e; }
-    #webhook-btn {
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #c9d1d9;
-      padding: 4px 10px;
+      padding: 6px 14px;
       cursor: pointer;
-      font-size: 0.78rem;
+      white-space: nowrap;
+      transition: background 0.15s;
     }
-    #webhook-btn:hover { background: #30363d; }
-    #webhook-status { font-size: 0.72rem; color: #3fb950; padding: 0 16px 4px; flex-shrink: 0; min-height: 16px; }
+    .btn-primary:hover { background: var(--green-dim); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text-mid);
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 0.78rem;
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .status-line {
+      padding: 4px 14px;
+      font-size: 0.71rem;
+      color: var(--text-dim);
+      flex-shrink: 0;
+      min-height: 22px;
+      font-family: var(--mono);
+    }
+
+    /* ── Tables ── */
     .table-wrap {
       flex: 1;
       overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
     }
     thead th {
       position: sticky;
       top: 0;
-      background: #161b22;
-      padding: 6px 10px;
+      background: var(--surface);
+      padding: 6px 12px;
       text-align: left;
-      color: #8b949e;
-      font-weight: 600;
-      border-bottom: 1px solid #30363d;
+      color: var(--text-dim);
+      font-weight: 500;
+      font-size: 0.67rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      z-index: 1;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 5px 12px;
+      font-family: var(--mono);
+      font-size: 0.73rem;
+      vertical-align: middle;
+    }
+    tbody td.text { font-family: var(--sans); }
+
+    .port-high  { color: var(--red); font-weight: 500; }
+    .port-med   { color: var(--amber); }
+    .port-low   { color: var(--green); }
+
+    .abuse-high { color: var(--red); font-weight: 500; }
+    .abuse-med  { color: var(--amber); }
+    .abuse-low  { color: var(--green); }
+    .abuse-none { color: var(--text-dim); }
+
+    .trunc {
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
-    tbody tr { border-bottom: 1px solid #21262d; }
-    tbody tr:hover { background: #161b22; }
-    tbody td { padding: 5px 10px; }
-
-    .port-risk-high  { color: #f85149; font-weight: 700; }
-    .port-risk-med   { color: #e3b341; }
-    .port-risk-low   { color: #3fb950; }
 
     #scan-empty {
-      padding: 20px;
-      color: #484f58;
-      font-size: 0.83rem;
+      padding: 32px 20px;
+      color: var(--text-dim);
+      font-size: 0.78rem;
       text-align: center;
+      font-family: var(--sans);
     }
 
-    /* ── Right: Honeypot ── */
+    /* ── Scan section divider ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    /* ── Discover results ── */
+    #discover-results { display: none; flex-shrink: 0; }
+    .discover-scan-btn {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--blue);
+      font-family: var(--mono);
+      font-size: 0.67rem;
+      padding: 2px 7px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .discover-scan-btn:hover { border-color: var(--blue); }
+
+    /* ── Map ── */
     #map {
       height: 280px;
       min-height: 280px;
       flex-shrink: 0;
     }
+    .leaflet-popup-content-wrapper {
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border2) !important;
+      border-radius: 0 !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+      font-family: var(--mono) !important;
+      font-size: 0.73rem !important;
+    }
+    .leaflet-popup-tip { background: var(--surface) !important; }
+    .leaflet-popup-close-button { color: var(--text-dim) !important; }
 
+    /* ── Hit counter ── */
     #honey-counter {
-      padding: 3px 12px;
-      font-size: 0.72rem;
-      color: #8b949e;
+      padding: 4px 14px;
+      font-size: 0.67rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
       text-align: right;
       flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
     }
 
-    #honey-table-wrap {
-      flex: 1;
-      overflow-y: auto;
+    /* ── Animations ── */
+    @keyframes slideIn {
+      from { opacity: 0; background: rgba(0, 255, 156, 0.06); }
+      to   { opacity: 1; background: transparent; }
+    }
+    .row-new {
+      animation: slideIn 0.5s ease forwards;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .row-new { animation: none; }
     }
 
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .honey-row-new {
-      animation: fadeInDown 0.3s ease forwards;
+    .threat-row td {
+      border-left: 2px solid var(--red);
+      color: var(--red);
+      font-weight: 500;
     }
 
-    /* Threat escalation highlight */
-    @keyframes flashRed {
-      0%   { background: #3d0e0e; }
-      50%  { background: #5a1a1a; }
-      100% { background: transparent; }
+    @keyframes flashBorder {
+      0%, 100% { border-left-color: var(--red); }
+      50%       { border-left-color: transparent; }
     }
-    .threat-flash {
-      animation: flashRed 1s ease 3;
+    .threat-flash td:first-child {
+      border-left: 2px solid var(--red);
+      animation: flashBorder 0.4s ease 4;
     }
-
-    .abuse-high { color: #f85149; font-weight: 700; }
-    .abuse-med  { color: #e3b341; }
-    .abuse-low  { color: #3fb950; }
-    .abuse-none { color: #484f58; }
-
-    .trunc { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 </head>
 <body>
 
 <header>
-  <span style="font-size:1.4rem">🍯</span>
-  <h1>HoneyMap</h1>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="11" cy="11" r="10" stroke="#1a2440" stroke-width="1.5"/>
+        <circle cx="11" cy="11" r="6" stroke="#243050" stroke-width="1"/>
+        <circle cx="11" cy="11" r="2.5" fill="#00FF9C"/>
+        <line x1="11" y1="1" x2="11" y2="5" stroke="#00FF9C" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="11" y1="17" x2="11" y2="21" stroke="#1a2440" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="1" y1="11" x2="5" y2="11" stroke="#1a2440" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="17" y1="11" x2="21" y2="11" stroke="#1a2440" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>HoneyMap</h1>
+  </div>
+
   <div id="ws-status">
     <div id="ws-dot"></div>
-    <span id="ws-label">Disconnected</span>
+    <span id="ws-label">Connecting</span>
   </div>
 </header>
 
-<!-- Stats strip -->
 <div id="stats-strip">
-  <div class="stat-cell"><div class="stat-label">Total Hits</div><div class="stat-value" id="stat-total">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Unique IPs</div><div class="stat-value" id="stat-unique">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Top Port</div><div class="stat-value" id="stat-port">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Top Country</div><div class="stat-value" id="stat-country">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Last Hour</div><div class="stat-value" id="stat-hour">—</div></div>
+  <div class="stat-cell">
+    <div class="stat-label">Total hits</div>
+    <div class="stat-value" id="stat-total">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Unique IPs</div>
+    <div class="stat-value" id="stat-unique">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Top port</div>
+    <div class="stat-value" id="stat-port">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Top country</div>
+    <div class="stat-value" id="stat-country">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Last hour</div>
+    <div class="stat-value" id="stat-hour">—</div>
+  </div>
 </div>
 
 <main>
-  <!-- ── LEFT PANEL — Port Scanner ── -->
+  <!-- LEFT — Scanner -->
   <div class="panel">
-    <div class="panel-header">🔍 Port Scanner</div>
+    <div class="panel-title"><span class="dot"></span>Port scanner</div>
 
-    <form id="scan-form" onsubmit="triggerScan(event)">
-      <input id="scan-host" type="text" placeholder="Target IP or hostname…" value="127.0.0.1" />
-      <button id="scan-btn" type="submit">Scan</button>
+    <form class="tool-row" id="scan-form" onsubmit="triggerScan(event)">
+      <input class="tool-input" id="scan-host" type="text" placeholder="IP or hostname" value="127.0.0.1" autocomplete="off" spellcheck="false" />
+      <button class="btn-primary" id="scan-btn" type="submit">Scan</button>
     </form>
-    <div id="scan-status"></div>
+    <div class="status-line" id="scan-status"></div>
 
     <div class="table-wrap">
-      <div id="scan-empty">Enter a host and click Scan.</div>
+      <div id="scan-empty">Enter a target and scan.</div>
       <table id="scan-table" style="display:none">
         <thead>
           <tr><th>Port</th><th>Service</th><th>Version</th></tr>
@@ -305,36 +442,28 @@
       </table>
     </div>
 
-    <!-- Network Discovery -->
-    <div class="panel-header" style="font-size:0.75rem">🌐 Network Discovery</div>
-    <form id="discover-form" onsubmit="triggerDiscover(event)">
-      <input id="discover-subnet" type="text" placeholder="Subnet e.g. 192.168.1.0/24" />
-      <button id="discover-btn" type="submit">Discover</button>
+    <div class="section-divider">Network discovery</div>
+    <form class="tool-row" id="discover-form" onsubmit="triggerDiscover(event)">
+      <input class="tool-input" id="discover-subnet" type="text" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false" />
+      <button class="btn-secondary" id="discover-btn" type="submit">Sweep</button>
     </form>
-    <div id="discover-status"></div>
-    <div id="discover-results" style="display:none">
-      <div class="table-wrap" style="max-height:140px">
-        <table id="discover-table">
-          <thead><tr><th>Live Host</th><th>Action</th></tr></thead>
+    <div class="status-line" id="discover-status"></div>
+    <div id="discover-results">
+      <div class="table-wrap" style="max-height:130px">
+        <table>
+          <thead><tr><th>Live host</th><th></th></tr></thead>
           <tbody id="discover-tbody"></tbody>
         </table>
       </div>
     </div>
-
-    <!-- Webhook config at the bottom of the left panel -->
-    <form id="webhook-form" onsubmit="saveWebhook(event)">
-      <input id="webhook-url" type="url" placeholder="Webhook URL (optional alert config)…" />
-      <button id="webhook-btn" type="submit">Save</button>
-    </form>
-    <div id="webhook-status"></div>
   </div>
 
-  <!-- ── RIGHT PANEL — Honeypot Feed ── -->
+  <!-- RIGHT — Honeypot feed -->
   <div class="panel">
-    <div class="panel-header">🪤 Honeypot Feed</div>
+    <div class="panel-title"><span class="dot"></span>Honeypot feed</div>
     <div id="map"></div>
-    <div id="honey-counter">0 hits</div>
-    <div id="honey-table-wrap">
+    <div id="honey-counter">0 hits captured</div>
+    <div class="table-wrap" id="honey-table-wrap">
       <table>
         <thead>
           <tr>
@@ -345,7 +474,7 @@
             <th>ISP</th>
             <th>rDNS</th>
             <th>Banner</th>
-            <th>Abuse</th>
+            <th>Risk</th>
           </tr>
         </thead>
         <tbody id="honey-tbody"></tbody>
@@ -355,222 +484,169 @@
 </main>
 
 <script>
-// ─────────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────────
 const WS_URL   = 'ws://localhost:8000/ws';
 const API_BASE = 'http://localhost:8000';
 const MAX_ROWS = 50;
 
-// ─────────────────────────────────────────────
-// Leaflet map
-// ─────────────────────────────────────────────
-const map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+// ── Map ──────────────────────────────────────
+const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   maxZoom: 19,
 }).addTo(map);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-// ─────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────
+// ── State ────────────────────────────────────
 let ws = null;
 let honeyCount = 0;
-// Map IP → table row element for threat escalation targeting
 const ipRowMap = {};
 
-// ─────────────────────────────────────────────
-// WebSocket
-// ─────────────────────────────────────────────
+// ── WebSocket ────────────────────────────────
 function connectWS() {
   ws = new WebSocket(WS_URL);
-
   ws.onopen = () => {
     document.getElementById('ws-dot').classList.add('connected');
-    document.getElementById('ws-label').textContent = 'Connected';
-    // Load persisted history on connect
+    document.getElementById('ws-label').textContent = 'Live';
     loadHistory();
   };
-
   ws.onmessage = (evt) => {
     try { handleMessage(JSON.parse(evt.data)); }
-    catch (e) { console.warn('Bad WS message', e); }
+    catch (e) { console.warn('WS parse error', e); }
   };
-
   ws.onclose = () => {
     document.getElementById('ws-dot').classList.remove('connected');
-    document.getElementById('ws-label').textContent = 'Reconnecting…';
+    document.getElementById('ws-label').textContent = 'Reconnecting';
     setTimeout(connectWS, 3000);
   };
-
   ws.onerror = () => ws.close();
 }
 
-// ─────────────────────────────────────────────
-// History load on connect
-// ─────────────────────────────────────────────
 async function loadHistory() {
   try {
     const res = await fetch(`${API_BASE}/hits`);
     if (!res.ok) return;
     const hits = await res.json();
-    // Render oldest-first so newest ends up at top after prepend
     [...hits].reverse().forEach(h => handleHoneypotHit({ ...h, type: 'honeypot_hit' }));
-  } catch (_) { /* backend may not be up yet */ }
+  } catch (_) {}
 }
 
-// ─────────────────────────────────────────────
-// Message router
-// ─────────────────────────────────────────────
+// ── Router ───────────────────────────────────
 function handleMessage(msg) {
   switch (msg.type) {
-    case 'honeypot_hit':       handleHoneypotHit(msg);      break;
-    case 'scan_result':        handleScanResult(msg);       break;
-    case 'threat_escalation':  handleThreatEscalation(msg); break;
-    case 'stats':              handleStats(msg);            break;
-    case 'discover_host':      handleDiscoverHost(msg);     break;
-    case 'discover_done':      handleDiscoverDone(msg);     break;
+    case 'honeypot_hit':      handleHoneypotHit(msg);     break;
+    case 'scan_result':       handleScanResult(msg);      break;
+    case 'threat_escalation': handleThreatEscalation(msg);break;
+    case 'stats':             handleStats(msg);           break;
+    case 'discover_host':     handleDiscoverHost(msg);    break;
+    case 'discover_done':     handleDiscoverDone(msg);    break;
   }
 }
 
-// ─────────────────────────────────────────────
-// Honeypot hit handler
-// ─────────────────────────────────────────────
+// ── Honeypot hit ─────────────────────────────
 function handleHoneypotHit(msg) {
-  // Map marker — color by abuse score
   if (msg.lat != null && msg.lng != null) {
-    const color = abuseColor(msg.abuse_score);
+    const color = riskColor(msg.abuse_score);
     const marker = L.circleMarker([msg.lat, msg.lng], {
-      radius: 7,
+      radius: 5,
       fillColor: color,
       color: color,
-      weight: 2,
-      opacity: 0.9,
-      fillOpacity: 0.75,
+      weight: 1.5,
+      opacity: 1,
+      fillOpacity: 0.7,
     }).addTo(map);
     marker.bindPopup(
-      `<b>${esc(msg.ip)}</b><br>Port: ${msg.port}<br>${esc(msg.country || '—')}<br>` +
-      `<small>${esc(msg.isp || '—')}</small><br>` +
-      `<small>rDNS: ${esc(msg.rdns || '—')}</small><br>` +
-      `<small>Abuse: ${msg.abuse_score != null ? msg.abuse_score : '—'}</small>`
+      `<b style="color:${color}">${esc(msg.ip)}</b><br>` +
+      `Port ${msg.port} · ${esc(msg.country || '—')}<br>` +
+      `${esc(msg.isp || '—')}<br>` +
+      (msg.rdns ? `${esc(msg.rdns)}<br>` : '') +
+      `Risk: ${msg.abuse_score != null ? msg.abuse_score : 'unknown'}`
     );
   }
 
-  // Table row
   const tbody = document.getElementById('honey-tbody');
   const tr = document.createElement('tr');
-  tr.className = 'honey-row-new';
+  tr.className = 'row-new';
   tr.dataset.ip = msg.ip;
   tr.innerHTML = `
     <td>${fmtTs(msg.ts)}</td>
-    <td style="font-family:monospace">${esc(msg.ip)}${msg.hit_count > 1 ? ` <span style="color:#e3b341;font-size:0.7rem">(×${msg.hit_count})</span>` : ''}</td>
+    <td>${esc(msg.ip)}${msg.hit_count > 1 ? ` <span style="color:var(--amber);font-size:0.65rem">×${msg.hit_count}</span>` : ''}</td>
     <td>${msg.port}</td>
-    <td>${esc(msg.country || '—')}</td>
-    <td class="trunc">${esc(msg.isp || '—')}</td>
+    <td class="text">${esc(msg.country || '—')}</td>
+    <td class="trunc text">${esc(msg.isp || '—')}</td>
     <td class="trunc">${esc(msg.rdns || '—')}</td>
-    <td class="trunc" style="font-family:monospace;font-size:0.72rem">${msg.banner ? esc(msg.banner) : '<span style="color:#484f58">—</span>'}</td>
+    <td class="trunc" style="color:var(--text-mid)">${msg.banner ? esc(msg.banner) : '<span style="color:var(--text-dim)">—</span>'}</td>
     <td class="${abuseClass(msg.abuse_score)}">${msg.abuse_score != null ? msg.abuse_score : '—'}</td>
   `;
   tbody.insertBefore(tr, tbody.firstChild);
-  ipRowMap[msg.ip] = tr;  // track latest row for this IP
-
-  // Cap at MAX_ROWS
+  ipRowMap[msg.ip] = tr;
   while (tbody.rows.length > MAX_ROWS) tbody.deleteRow(tbody.rows.length - 1);
 
   honeyCount++;
-  document.getElementById('honey-counter').textContent =
-    `${honeyCount} hit${honeyCount !== 1 ? 's' : ''}`;
+  document.getElementById('honey-counter').textContent = `${honeyCount} hit${honeyCount !== 1 ? 's' : ''} captured`;
 }
 
-// ─────────────────────────────────────────────
-// Threat escalation handler
-// ─────────────────────────────────────────────
+// ── Threat escalation ─────────────────────────
 function handleThreatEscalation(msg) {
-  const tr = ipRowMap[msg.ip];
-  if (tr) {
-    tr.classList.remove('threat-flash');
-    // Force reflow to restart animation
-    void tr.offsetWidth;
-    tr.classList.add('threat-flash');
-    // Prepend a badge to the IP cell
-    const ipCell = tr.cells[1];
-    if (!ipCell.querySelector('.threat-badge')) {
-      const badge = document.createElement('span');
-      badge.className = 'threat-badge';
-      badge.textContent = ' 🔴';
-      ipCell.appendChild(badge);
-    }
+  const existing = ipRowMap[msg.ip];
+  if (existing) {
+    existing.classList.remove('threat-flash');
+    void existing.offsetWidth;
+    existing.classList.add('threat-flash');
   }
-  // Also add a dedicated row
   const tbody = document.getElementById('honey-tbody');
-  const tr2 = document.createElement('tr');
-  tr2.style.background = '#3d0e0e';
-  tr2.innerHTML = `
-    <td colspan="8" style="color:#f85149;font-weight:700;padding:4px 10px">
-      ⚠️ THREAT ESCALATION — ${esc(msg.ip)} has hit ${msg.hit_count} times
-    </td>
-  `;
-  tbody.insertBefore(tr2, tbody.firstChild);
+  const tr = document.createElement('tr');
+  tr.className = 'threat-row';
+  tr.innerHTML = `<td colspan="8" class="text">Persistent attacker — ${esc(msg.ip)} · ${msg.hit_count} hits</td>`;
+  tbody.insertBefore(tr, tbody.firstChild);
 }
 
-// ─────────────────────────────────────────────
-// Stats handler
-// ─────────────────────────────────────────────
+// ── Stats ─────────────────────────────────────
 function handleStats(msg) {
-  document.getElementById('stat-total').textContent   = msg.total_hits   ?? '—';
-  document.getElementById('stat-unique').textContent  = msg.unique_ips   ?? '—';
-  document.getElementById('stat-port').textContent    = msg.top_port     ?? '—';
-  document.getElementById('stat-country').textContent = msg.top_country  ?? '—';
+  document.getElementById('stat-total').textContent   = msg.total_hits     ?? '—';
+  document.getElementById('stat-unique').textContent  = msg.unique_ips     ?? '—';
+  document.getElementById('stat-port').textContent    = msg.top_port       ?? '—';
+  document.getElementById('stat-country').textContent = msg.top_country    ?? '—';
   document.getElementById('stat-hour').textContent    = msg.hits_last_hour ?? '—';
 }
 
-// ─────────────────────────────────────────────
-// Scan result handler
-// ─────────────────────────────────────────────
+// ── Scan result ───────────────────────────────
 function handleScanResult(msg) {
   const empty = document.getElementById('scan-empty');
   const table = document.getElementById('scan-table');
   const tbody = document.getElementById('scan-tbody');
-
   tbody.innerHTML = '';
 
   if (!msg.ports || msg.ports.length === 0) {
     empty.style.display = 'block';
-    empty.textContent = `No open ports found on ${msg.host}.`;
+    empty.textContent = `No open ports on ${msg.host}.`;
     table.style.display = 'none';
     return;
   }
 
   empty.style.display = 'none';
   table.style.display = 'table';
-
   for (const p of msg.ports) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="${portRisk(p.port)}">${p.port}</td>
-      <td>${esc(p.service || '—')}</td>
-      <td style="color:#8b949e">${esc(p.version || '—')}</td>
+      <td class="${portClass(p.port)}">${p.port}</td>
+      <td class="text">${esc(p.service || '—')}</td>
+      <td style="color:var(--text-mid)">${esc(p.version || '—')}</td>
     `;
     tbody.appendChild(tr);
   }
-
   document.getElementById('scan-status').textContent =
     `${msg.ports.length} open port${msg.ports.length !== 1 ? 's' : ''} on ${msg.host}`;
 }
 
-// ─────────────────────────────────────────────
-// Scan form
-// ─────────────────────────────────────────────
+// ── Scan form ─────────────────────────────────
 async function triggerScan(evt) {
   evt.preventDefault();
   const host = document.getElementById('scan-host').value.trim();
   if (!host) return;
-
-  const btn = document.getElementById('scan-btn');
+  const btn    = document.getElementById('scan-btn');
   const status = document.getElementById('scan-status');
   btn.disabled = true;
   status.textContent = `Scanning ${host}…`;
-
   try {
     const res = await fetch(`${API_BASE}/scan`, {
       method: 'POST',
@@ -578,57 +654,28 @@ async function triggerScan(evt) {
       body: JSON.stringify({ host }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // Result arrives via WebSocket broadcast
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
+    status.textContent = `Scan failed: ${e.message}`;
   } finally {
     btn.disabled = false;
   }
 }
 
-// ─────────────────────────────────────────────
-// Webhook config form
-// ─────────────────────────────────────────────
-async function saveWebhook(evt) {
-  evt.preventDefault();
-  const url = document.getElementById('webhook-url').value.trim();
-  if (!url) return;
-  const statusEl = document.getElementById('webhook-status');
-  try {
-    const res = await fetch(`${API_BASE}/alert-config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ webhook_url: url }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    statusEl.textContent = '✓ Webhook saved';
-    setTimeout(() => { statusEl.textContent = ''; }, 3000);
-  } catch (e) {
-    statusEl.style.color = '#f85149';
-    statusEl.textContent = `Error: ${e.message}`;
-  }
-}
-
-// ─────────────────────────────────────────────
-// Network discovery handlers
-// ─────────────────────────────────────────────
+// ── Discovery ─────────────────────────────────
 function handleDiscoverHost(msg) {
-  const results = document.getElementById('discover-results');
-  const tbody   = document.getElementById('discover-tbody');
-  results.style.display = 'block';
+  document.getElementById('discover-results').style.display = 'block';
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td style="font-family:monospace">${esc(msg.ip)}</td>
-    <td><button class="discover-scan-btn" onclick="scanFromDiscover('${esc(msg.ip)}')">Scan</button></td>
+    <td>${esc(msg.ip)}</td>
+    <td><button class="discover-scan-btn" onclick="scanFromDiscover('${esc(msg.ip)}')">scan</button></td>
   `;
-  tbody.appendChild(tr);
+  document.getElementById('discover-tbody').appendChild(tr);
 }
 
 function handleDiscoverDone(msg) {
-  const status = document.getElementById('discover-status');
-  const btn    = document.getElementById('discover-btn');
-  status.textContent = `✓ Found ${msg.total} live host${msg.total !== 1 ? 's' : ''} on ${msg.subnet}`;
-  btn.disabled = false;
+  document.getElementById('discover-status').textContent =
+    `${msg.total} host${msg.total !== 1 ? 's' : ''} found on ${msg.subnet}`;
+  document.getElementById('discover-btn').disabled = false;
 }
 
 function scanFromDiscover(ip) {
@@ -640,13 +687,11 @@ async function triggerDiscover(evt) {
   evt.preventDefault();
   const subnet = document.getElementById('discover-subnet').value.trim();
   if (!subnet) return;
-  const btn     = document.getElementById('discover-btn');
-  const status  = document.getElementById('discover-status');
-  const tbody   = document.getElementById('discover-tbody');
-  const results = document.getElementById('discover-results');
+  const btn    = document.getElementById('discover-btn');
+  const status = document.getElementById('discover-status');
   btn.disabled = true;
-  tbody.innerHTML = '';
-  results.style.display = 'none';
+  document.getElementById('discover-tbody').innerHTML = '';
+  document.getElementById('discover-results').style.display = 'none';
   status.textContent = `Sweeping ${subnet}…`;
   try {
     const res = await fetch(`${API_BASE}/discover`, {
@@ -655,75 +700,51 @@ async function triggerDiscover(evt) {
       body: JSON.stringify({ subnet }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // Results stream in via WebSocket discover_host / discover_done messages
   } catch (e) {
-    status.textContent = `Error: ${e.message}`;
+    status.textContent = `Failed: ${e.message}`;
     btn.disabled = false;
   }
 }
 
-// ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
-function portRisk(port) {
-  if ([22, 23, 3389, 445, 21].includes(port)) return 'port-risk-high';
-  if ([80, 443, 8080, 8443].includes(port))   return 'port-risk-med';
-  return 'port-risk-low';
+// ── Helpers ───────────────────────────────────
+function portClass(port) {
+  if ([21, 22, 23, 445, 3389].includes(port)) return 'port-high';
+  if ([80, 443, 8080, 8443].includes(port))   return 'port-med';
+  return 'port-low';
 }
-
-function abuseColor(score) {
-  if (score == null) return '#e3b341';
-  if (score >= 70)   return '#f85149';
-  if (score >= 30)   return '#e3b341'; // orange-yellow
-  return '#e3b341';
+function riskColor(score) {
+  if (score == null)   return 'var(--amber)';
+  if (score >= 70)     return 'var(--red)';
+  if (score >= 30)     return 'var(--amber)';
+  return 'var(--green)';
 }
-
 function abuseClass(score) {
   if (score == null)  return 'abuse-none';
   if (score >= 70)    return 'abuse-high';
   if (score >= 30)    return 'abuse-med';
   return 'abuse-low';
 }
-
 function fmtTs(ts) {
-  return new Date(ts * 1000).toLocaleTimeString();
+  return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
-
 function esc(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ─────────────────────────────────────────────
-// Mock data — matches the updated schema
-// Remove the setTimeout block below when backend is running
-// ─────────────────────────────────────────────
-const MOCK = [
-  { type: 'honeypot_hit', ip: '185.220.101.5', port: 8022, ts: Math.floor(Date.now()/1000)-120, lat: 52.5, lng: 13.4,  country: 'Germany',       isp: 'Tor Project', rdns: 'tor-exit.example.com', banner: null,           abuse_score: 90, hit_count: 1 },
-  { type: 'honeypot_hit', ip: '218.92.0.180',  port: 8444, ts: Math.floor(Date.now()/1000)-80,  lat: 31.0, lng: 121.0, country: 'China',         isp: 'ChinaNet',    rdns: null,                   banner: 'USER root\r\n', abuse_score: 55, hit_count: 1 },
-  { type: 'honeypot_hit', ip: '45.142.212.100',port: 8023, ts: Math.floor(Date.now()/1000)-40,  lat: 55.75,lng: 37.6,  country: 'Russia',        isp: 'Selectel',    rdns: null,                   banner: null,           abuse_score: 72, hit_count: 1 },
-  { type: 'threat_escalation', ip: '185.220.101.5', hit_count: 5, ts: Math.floor(Date.now()/1000)-10 },
-  { type: 'scan_result',  host: '127.0.0.1', ports: [
-      { port: 80,   service: 'http',  version: 'nginx 1.24' },
-      { port: 22,   service: 'ssh',   version: 'OpenSSH 8.9' },
-      { port: 3306, service: 'mysql', version: 'MySQL 8.0' },
-  ]},
-  { type: 'stats', total_hits: 42, unique_ips: 17, top_port: 8022, top_country: 'CN', hits_last_hour: 8 },
-];
-
-// Connect to live WebSocket (always)
+// ── Boot ──────────────────────────────────────
 connectWS();
-
-// Leaflet needs a settled layout — force recalc after paint and after 500ms
 requestAnimationFrame(() => { map.invalidateSize(); setTimeout(() => map.invalidateSize(), 500); });
 
-// Play back mock data 600 ms after load so demo works without a backend.
-// Comment out these 3 lines to run purely on live backend data.
-setTimeout(() => {
-  MOCK.forEach((msg, i) => setTimeout(() => handleMessage(msg), i * 350));
-}, 600);
+// Mock fallback for demo without backend
+const MOCK = [
+  { type:'honeypot_hit', ip:'185.220.101.5', port:8022, ts:Math.floor(Date.now()/1000)-120, lat:52.5,  lng:13.4,  country:'Germany',       isp:'Tor Project', rdns:'tor-exit.example.com', banner:null,           abuse_score:90, hit_count:1 },
+  { type:'honeypot_hit', ip:'218.92.0.180',  port:8444, ts:Math.floor(Date.now()/1000)-80,  lat:31.0,  lng:121.0, country:'China',          isp:'ChinaNet',    rdns:null,                   banner:'USER root\r\n',abuse_score:55, hit_count:1 },
+  { type:'honeypot_hit', ip:'45.142.212.100',port:8023, ts:Math.floor(Date.now()/1000)-40,  lat:55.75, lng:37.6,  country:'Russia',         isp:'Selectel',    rdns:null,                   banner:null,           abuse_score:72, hit_count:1 },
+  { type:'threat_escalation', ip:'185.220.101.5', hit_count:5, ts:Math.floor(Date.now()/1000)-10 },
+  { type:'scan_result', host:'127.0.0.1', ports:[{port:80,service:'http',version:'nginx 1.24'},{port:22,service:'ssh',version:'OpenSSH 8.9'},{port:3306,service:'mysql',version:'MySQL 8.0'}]},
+  { type:'stats', total_hits:42, unique_ips:17, top_port:8022, top_country:'CN', hits_last_hour:8 },
+];
+setTimeout(() => { MOCK.forEach((msg, i) => setTimeout(() => handleMessage(msg), i * 350)); }, 600);
 </script>
 </body>
 </html>
