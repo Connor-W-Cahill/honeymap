@@ -73,24 +73,25 @@ get_recent_hits = get_hits
 
 def get_stats() -> dict:
     """Aggregate stats across all stored hits."""
-    conn = _get_conn()
-    total = conn.execute("SELECT COUNT(*) FROM hits").fetchone()[0]
-    unique = conn.execute("SELECT COUNT(DISTINCT ip) FROM hits").fetchone()[0]
+    # Use a fresh connection — this is called from worker threads via asyncio.to_thread
+    with sqlite3.connect(_DB_PATH) as conn:
+        total = conn.execute("SELECT COUNT(*) FROM hits").fetchone()[0]
+        unique = conn.execute("SELECT COUNT(DISTINCT ip) FROM hits").fetchone()[0]
 
-    top_port_row = conn.execute(
-        "SELECT port FROM hits GROUP BY port ORDER BY COUNT(*) DESC LIMIT 1"
-    ).fetchone()
-    top_port = top_port_row[0] if top_port_row else None
+        top_port_row = conn.execute(
+            "SELECT port FROM hits GROUP BY port ORDER BY COUNT(*) DESC LIMIT 1"
+        ).fetchone()
+        top_port = top_port_row[0] if top_port_row else None
 
-    top_country_row = conn.execute(
-        "SELECT country FROM hits WHERE country IS NOT NULL GROUP BY country ORDER BY COUNT(*) DESC LIMIT 1"
-    ).fetchone()
-    top_country = top_country_row[0] if top_country_row else None
+        top_country_row = conn.execute(
+            "SELECT country FROM hits WHERE country IS NOT NULL GROUP BY country ORDER BY COUNT(*) DESC LIMIT 1"
+        ).fetchone()
+        top_country = top_country_row[0] if top_country_row else None
 
-    one_hour_ago = int(time.time()) - 3600
-    hits_last_hour = conn.execute(
-        "SELECT COUNT(*) FROM hits WHERE ts >= ?", (one_hour_ago,)
-    ).fetchone()[0]
+        one_hour_ago = int(time.time()) - 3600
+        hits_last_hour = conn.execute(
+            "SELECT COUNT(*) FROM hits WHERE ts >= ?", (one_hour_ago,)
+        ).fetchone()[0]
 
     return {
         "type": "stats",

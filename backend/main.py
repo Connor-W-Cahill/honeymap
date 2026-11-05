@@ -78,13 +78,32 @@ async def _handle_honeypot_hit(hit: dict) -> None:
 # Webhook
 # ---------------------------------------------------------------------------
 
-_webhook_url: str | None = None
+_webhook_url: str | None = "https://discord.com/api/webhooks/1568040041585053746/2Wr52z6kiSTcQpxncBfdq6hgit2DY2Op8PEOYeJExT7A6OH9dQR5Q3Z80oml56Y6QEWs"
 
 
 async def _fire_webhook(payload: dict) -> None:
     try:
+        abuse = payload.get("abuse_score")
+        abuse_str = str(abuse) if abuse is not None else "—"
+        emoji = "🔴" if (abuse or 0) >= 70 else "🟡"
+        discord_payload = {
+            "embeds": [{
+                "title": f"{emoji} HoneyMap — Honeypot Hit",
+                "color": 0xf85149 if (abuse or 0) >= 70 else 0xe3b341,
+                "fields": [
+                    {"name": "IP",          "value": payload.get("ip", "—"),      "inline": True},
+                    {"name": "Port",        "value": str(payload.get("port","—")), "inline": True},
+                    {"name": "Country",     "value": payload.get("country") or "—","inline": True},
+                    {"name": "ISP",         "value": payload.get("isp") or "—",    "inline": True},
+                    {"name": "rDNS",        "value": payload.get("rdns") or "—",   "inline": True},
+                    {"name": "Abuse Score", "value": abuse_str,                    "inline": True},
+                    {"name": "Banner",      "value": f'`{payload["banner"]}`' if payload.get("banner") else "—", "inline": False},
+                ],
+                "footer": {"text": f"Hit #{payload.get('hit_count',1)}"},
+            }]
+        }
         async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(_webhook_url, json=payload)
+            await client.post(_webhook_url, json=discord_payload)
     except Exception:
         pass
 
