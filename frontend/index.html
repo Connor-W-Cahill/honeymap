@@ -96,14 +96,14 @@
     }
 
     /* ── Left: Scanner ── */
-    #scan-form {
+    #scan-form, #discover-form {
       display: flex;
       gap: 8px;
       padding: 10px 16px;
       flex-shrink: 0;
       border-bottom: 1px solid #30363d;
     }
-    #scan-host {
+    #scan-host, #discover-subnet {
       flex: 1;
       background: #161b22;
       border: 1px solid #30363d;
@@ -112,7 +112,7 @@
       padding: 5px 10px;
       font-size: 0.88rem;
     }
-    #scan-host:focus { outline: none; border-color: #f0883e; }
+    #scan-host:focus, #discover-subnet:focus { outline: none; border-color: #f0883e; }
     #scan-btn {
       background: #f0883e;
       border: none;
@@ -125,6 +125,24 @@
     }
     #scan-btn:hover { background: #e07730; }
     #scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #discover-btn {
+      background: #1f6feb;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 700;
+      padding: 5px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+    #discover-btn:hover { background: #1a5cc8; }
+    #discover-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #discover-status { padding: 3px 16px 4px; font-size: 0.76rem; color: #8b949e; flex-shrink: 0; min-height: 18px; }
+    .discover-scan-btn {
+      background: none; border: 1px solid #30363d; border-radius: 4px;
+      color: #f0883e; cursor: pointer; font-size: 0.72rem; padding: 1px 6px;
+    }
+    .discover-scan-btn:hover { background: #21262d; }
 
     #scan-status {
       padding: 3px 16px 6px;
@@ -202,7 +220,8 @@
 
     /* ── Right: Honeypot ── */
     #map {
-      height: 48%;
+      height: 280px;
+      min-height: 280px;
       flex-shrink: 0;
     }
 
@@ -286,6 +305,22 @@
       </table>
     </div>
 
+    <!-- Network Discovery -->
+    <div class="panel-header" style="font-size:0.75rem">🌐 Network Discovery</div>
+    <form id="discover-form" onsubmit="triggerDiscover(event)">
+      <input id="discover-subnet" type="text" placeholder="Subnet e.g. 192.168.1.0/24" />
+      <button id="discover-btn" type="submit">Discover</button>
+    </form>
+    <div id="discover-status"></div>
+    <div id="discover-results" style="display:none">
+      <div class="table-wrap" style="max-height:140px">
+        <table id="discover-table">
+          <thead><tr><th>Live Host</th><th>Action</th></tr></thead>
+          <tbody id="discover-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Webhook config at the bottom of the left panel -->
     <form id="webhook-form" onsubmit="saveWebhook(event)">
       <input id="webhook-url" type="url" placeholder="Webhook URL (optional alert config)…" />
@@ -331,9 +366,8 @@ const MAX_ROWS = 50;
 // Leaflet map
 // ─────────────────────────────────────────────
 const map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO',
-  subdomains: 'abcd',
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   maxZoom: 19,
 }).addTo(map);
 
@@ -394,6 +428,8 @@ function handleMessage(msg) {
     case 'scan_result':        handleScanResult(msg);       break;
     case 'threat_escalation':  handleThreatEscalation(msg); break;
     case 'stats':              handleStats(msg);            break;
+    case 'discover_host':      handleDiscoverHost(msg);     break;
+    case 'discover_done':      handleDiscoverDone(msg);     break;
   }
 }
 
@@ -574,6 +610,59 @@ async function saveWebhook(evt) {
 }
 
 // ─────────────────────────────────────────────
+// Network discovery handlers
+// ─────────────────────────────────────────────
+function handleDiscoverHost(msg) {
+  const results = document.getElementById('discover-results');
+  const tbody   = document.getElementById('discover-tbody');
+  results.style.display = 'block';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="font-family:monospace">${esc(msg.ip)}</td>
+    <td><button class="discover-scan-btn" onclick="scanFromDiscover('${esc(msg.ip)}')">Scan</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function handleDiscoverDone(msg) {
+  const status = document.getElementById('discover-status');
+  const btn    = document.getElementById('discover-btn');
+  status.textContent = `✓ Found ${msg.total} live host${msg.total !== 1 ? 's' : ''} on ${msg.subnet}`;
+  btn.disabled = false;
+}
+
+function scanFromDiscover(ip) {
+  document.getElementById('scan-host').value = ip;
+  document.getElementById('scan-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+}
+
+async function triggerDiscover(evt) {
+  evt.preventDefault();
+  const subnet = document.getElementById('discover-subnet').value.trim();
+  if (!subnet) return;
+  const btn     = document.getElementById('discover-btn');
+  const status  = document.getElementById('discover-status');
+  const tbody   = document.getElementById('discover-tbody');
+  const results = document.getElementById('discover-results');
+  btn.disabled = true;
+  tbody.innerHTML = '';
+  results.style.display = 'none';
+  status.textContent = `Sweeping ${subnet}…`;
+  try {
+    const res = await fetch(`${API_BASE}/discover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subnet }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    // Results stream in via WebSocket discover_host / discover_done messages
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
 function portRisk(port) {
@@ -626,6 +715,9 @@ const MOCK = [
 
 // Connect to live WebSocket (always)
 connectWS();
+
+// Leaflet needs a settled layout — force recalc after paint and after 500ms
+requestAnimationFrame(() => { map.invalidateSize(); setTimeout(() => map.invalidateSize(), 500); });
 
 // Play back mock data 600 ms after load so demo works without a backend.
 // Comment out these 3 lines to run purely on live backend data.

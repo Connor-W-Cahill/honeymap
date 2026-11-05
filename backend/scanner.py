@@ -68,3 +68,49 @@ async def scan_host(
     message = {"type": "scan_result", "host": host, "ports": ports}
     await broadcast(message)
     return ports
+
+
+def _ping_sweep(subnet: str) -> list[str]:
+    """Return list of live IPs in the subnet using nmap ping sweep."""
+    nm = nmap.PortScanner()
+    nm.scan(hosts=subnet, arguments="-sn -T4 --open")
+    return [h for h in nm.all_hosts() if nm[h].state() == "up"]
+
+
+def _socket_ping(subnet: str) -> list[str]:
+    """Fallback: try TCP connect on port 80 and 22 for each host in a /24."""
+    import ipaddress
+    live = []
+    try:
+        net = ipaddress.ip_network(subnet, strict=False)
+        hosts = list(net.hosts())[:254]  # cap at /24
+    except ValueError:
+        return []
+    for ip in hosts:
+        for port in (80, 22, 443):
+            try:
+                with socket.create_connection((str(ip), port), timeout=0.3):
+                    live.append(str(ip))
+                    break
+            except OSError:
+                pass
+    return live
+
+
+async def discover_network(
+    subnet: str,
+    broadcast: Callable[[dict], Awaitable[None]],
+) -> list[str]:
+    """Ping-sweep a subnet, broadcast each live host, then broadcast done."""
+    loop = asyncio.get_event_loop()
+
+    if _NMAP_AVAILABLE:
+        live_hosts = await loop.run_in_executor(None, _ping_sweep, subnet)
+    else:
+        live_hosts = await loop.run_in_executor(None, _socket_ping, subnet)
+
+    for ip in live_hosts:
+        await broadcast({"type": "discover_host", "ip": ip, "subnet": subnet})
+
+    await broadcast({"type": "discover_done", "subnet": subnet, "total": len(live_hosts)})
+    return live_hosts

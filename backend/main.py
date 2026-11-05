@@ -171,6 +171,17 @@ async def scan(req: ScanRequest):
     return {"host": req.host, "ports": ports}
 
 
+class DiscoverRequest(BaseModel):
+    subnet: str
+
+
+@app.post("/discover")
+async def discover(req: DiscoverRequest):
+    # Run in background so HTTP response returns immediately
+    asyncio.ensure_future(scanner.discover_network(req.subnet, broadcast))
+    return {"status": "started", "subnet": req.subnet}
+
+
 @app.get("/hits")
 async def get_hits(limit: int = 200):
     return await asyncio.to_thread(db.get_hits, limit)
