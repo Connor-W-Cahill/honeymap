@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🍯 HoneyMap</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 20px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.15rem; color: #f0883e; }
+    #ws-status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+    #ws-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #f85149;
+      transition: background 0.3s;
+    }
+    #ws-dot.connected { background: #3fb950; }
+
+    /* ── Stats strip ── */
+    #stats-strip {
+      display: flex;
+      gap: 0;
+      background: #0d1117;
+      border-bottom: 1px solid #30363d;
+      flex-shrink: 0;
+    }
+    .stat-cell {
+      flex: 1;
+      padding: 6px 14px;
+      border-right: 1px solid #30363d;
+      font-size: 0.78rem;
+    }
+    .stat-cell:last-child { border-right: none; }
+    .stat-label { color: #8b949e; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.04em; }
+    .stat-value { color: #f0883e; font-weight: 700; font-size: 0.95rem; margin-top: 1px; }
+
+    /* ── Main grid ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #30363d;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: #0d1117;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 8px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    /* ── Left: Scanner ── */
+    #scan-form {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid #30363d;
+    }
+    #scan-host {
+      flex: 1;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      padding: 5px 10px;
+      font-size: 0.88rem;
+    }
+    #scan-host:focus { outline: none; border-color: #f0883e; }
+    #scan-btn {
+      background: #f0883e;
+      border: none;
+      border-radius: 6px;
+      color: #0d1117;
+      font-weight: 700;
+      padding: 5px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+    #scan-btn:hover { background: #e07730; }
+    #scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #scan-status {
+      padding: 3px 16px 6px;
+      font-size: 0.76rem;
+      color: #8b949e;
+      flex-shrink: 0;
+      min-height: 20px;
+    }
+
+    /* ── Webhook config ── */
+    #webhook-form {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px;
+      flex-shrink: 0;
+      border-top: 1px solid #30363d;
+    }
+    #webhook-url {
+      flex: 1;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      padding: 4px 8px;
+      font-size: 0.78rem;
+    }
+    #webhook-url::placeholder { color: #484f58; }
+    #webhook-url:focus { outline: none; border-color: #8b949e; }
+    #webhook-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 0.78rem;
+    }
+    #webhook-btn:hover { background: #30363d; }
+    #webhook-status { font-size: 0.72rem; color: #3fb950; padding: 0 16px 4px; flex-shrink: 0; min-height: 16px; }
+
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #161b22;
+      padding: 6px 10px;
+      text-align: left;
+      color: #8b949e;
+      font-weight: 600;
+      border-bottom: 1px solid #30363d;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #21262d; }
+    tbody tr:hover { background: #161b22; }
+    tbody td { padding: 5px 10px; }
+
+    .port-risk-high  { color: #f85149; font-weight: 700; }
+    .port-risk-med   { color: #e3b341; }
+    .port-risk-low   { color: #3fb950; }
+
+    #scan-empty {
+      padding: 20px;
+      color: #484f58;
+      font-size: 0.83rem;
+      text-align: center;
+    }
+
+    /* ── Right: Honeypot ── */
+    #map {
+      height: 48%;
+      flex-shrink: 0;
+    }
+
+    #honey-counter {
+      padding: 3px 12px;
+      font-size: 0.72rem;
+      color: #8b949e;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    #honey-table-wrap {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .honey-row-new {
+      animation: fadeInDown 0.3s ease forwards;
+    }
+
+    /* Threat escalation highlight */
+    @keyframes flashRed {
+      0%   { background: #3d0e0e; }
+      50%  { background: #5a1a1a; }
+      100% { background: transparent; }
+    }
+    .threat-flash {
+      animation: flashRed 1s ease 3;
+    }
+
+    .abuse-high { color: #f85149; font-weight: 700; }
+    .abuse-med  { color: #e3b341; }
+    .abuse-low  { color: #3fb950; }
+    .abuse-none { color: #484f58; }
+
+    .trunc { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.4rem">🍯</span>
+  <h1>HoneyMap</h1>
+  <div id="ws-status">
+    <div id="ws-dot"></div>
+    <span id="ws-label">Disconnected</span>
+  </div>
+</header>
+
+<!-- Stats strip -->
+<div id="stats-strip">
+  <div class="stat-cell"><div class="stat-label">Total Hits</div><div class="stat-value" id="stat-total">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Unique IPs</div><div class="stat-value" id="stat-unique">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Top Port</div><div class="stat-value" id="stat-port">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Top Country</div><div class="stat-value" id="stat-country">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Last Hour</div><div class="stat-value" id="stat-hour">—</div></div>
+</div>
+
+<main>
+  <!-- ── LEFT PANEL — Port Scanner ── -->
+  <div class="panel">
+    <div class="panel-header">🔍 Port Scanner</div>
+
+    <form id="scan-form" onsubmit="triggerScan(event)">
+      <input id="scan-host" type="text" placeholder="Target IP or hostname…" value="127.0.0.1" />
+      <button id="scan-btn" type="submit">Scan</button>
+    </form>
+    <div id="scan-status"></div>
+
+    <div class="table-wrap">
+      <div id="scan-empty">Enter a host and click Scan.</div>
+      <table id="scan-table" style="display:none">
+        <thead>
+          <tr><th>Port</th><th>Service</th><th>Version</th></tr>
+        </thead>
+        <tbody id="scan-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Webhook config at the bottom of the left panel -->
+    <form id="webhook-form" onsubmit="saveWebhook(event)">
+      <input id="webhook-url" type="url" placeholder="Webhook URL (optional alert config)…" />
+      <button id="webhook-btn" type="submit">Save</button>
+    </form>
+    <div id="webhook-status"></div>
+  </div>
+
+  <!-- ── RIGHT PANEL — Honeypot Feed ── -->
+  <div class="panel">
+    <div class="panel-header">🪤 Honeypot Feed</div>
+    <div id="map"></div>
+    <div id="honey-counter">0 hits</div>
+    <div id="honey-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>IP</th>
+            <th>Port</th>
+            <th>Country</th>
+            <th>ISP</th>
+            <th>rDNS</th>
+            <th>Banner</th>
+            <th>Abuse</th>
+          </tr>
+        </thead>
+        <tbody id="honey-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────
+const WS_URL   = 'ws://localhost:8000/ws';
+const API_BASE = 'http://localhost:8000';
+const MAX_ROWS = 50;
+
+// ─────────────────────────────────────────────
+// Leaflet map
+// ─────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let ws = null;
+let honeyCount = 0;
+// Map IP → table row element for threat escalation targeting
+const ipRowMap = {};
+
+// ─────────────────────────────────────────────
+// WebSocket
+// ─────────────────────────────────────────────
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').classList.add('connected');
+    document.getElementById('ws-label').textContent = 'Connected';
+    // Load persisted history on connect
+    loadHistory();
+  };
+
+  ws.onmessage = (evt) => {
+    try { handleMessage(JSON.parse(evt.data)); }
+    catch (e) { console.warn('Bad WS message', e); }
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-dot').classList.remove('connected');
+    document.getElementById('ws-label').textContent = 'Reconnecting…';
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+// ─────────────────────────────────────────────
+// History load on connect
+// ─────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/hits`);
+    if (!res.ok) return;
+    const hits = await res.json();
+    // Render oldest-first so newest ends up at top after prepend
+    [...hits].reverse().forEach(h => handleHoneypotHit({ ...h, type: 'honeypot_hit' }));
+  } catch (_) { /* backend may not be up yet */ }
+}
+
+// ─────────────────────────────────────────────
+// Message router
+// ─────────────────────────────────────────────
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'honeypot_hit':       handleHoneypotHit(msg);      break;
+    case 'scan_result':        handleScanResult(msg);       break;
+    case 'threat_escalation':  handleThreatEscalation(msg); break;
+    case 'stats':              handleStats(msg);            break;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Honeypot hit handler
+// ─────────────────────────────────────────────
+function handleHoneypotHit(msg) {
+  // Map marker — color by abuse score
+  if (msg.lat != null && msg.lng != null) {
+    const color = abuseColor(msg.abuse_score);
+    const marker = L.circleMarker([msg.lat, msg.lng], {
+      radius: 7,
+      fillColor: color,
+      color: color,
+      weight: 2,
+      opacity: 0.9,
+      fillOpacity: 0.75,
+    }).addTo(map);
+    marker.bindPopup(
+      `<b>${esc(msg.ip)}</b><br>Port: ${msg.port}<br>${esc(msg.country || '—')}<br>` +
+      `<small>${esc(msg.isp || '—')}</small><br>` +
+      `<small>rDNS: ${esc(msg.rdns || '—')}</small><br>` +
+      `<small>Abuse: ${msg.abuse_score != null ? msg.abuse_score : '—'}</small>`
+    );
+  }
+
+  // Table row
+  const tbody = document.getElementById('honey-tbody');
+  const tr = document.createElement('tr');
+  tr.className = 'honey-row-new';
+  tr.dataset.ip = msg.ip;
+  tr.innerHTML = `
+    <td>${fmtTs(msg.ts)}</td>
+    <td style="font-family:monospace">${esc(msg.ip)}${msg.hit_count > 1 ? ` <span style="color:#e3b341;font-size:0.7rem">(×${msg.hit_count})</span>` : ''}</td>
+    <td>${msg.port}</td>
+    <td>${esc(msg.country || '—')}</td>
+    <td class="trunc">${esc(msg.isp || '—')}</td>
+    <td class="trunc">${esc(msg.rdns || '—')}</td>
+    <td class="trunc" style="font-family:monospace;font-size:0.72rem">${msg.banner ? esc(msg.banner) : '<span style="color:#484f58">—</span>'}</td>
+    <td class="${abuseClass(msg.abuse_score)}">${msg.abuse_score != null ? msg.abuse_score : '—'}</td>
+  `;
+  tbody.insertBefore(tr, tbody.firstChild);
+  ipRowMap[msg.ip] = tr;  // track latest row for this IP
+
+  // Cap at MAX_ROWS
+  while (tbody.rows.length > MAX_ROWS) tbody.deleteRow(tbody.rows.length - 1);
+
+  honeyCount++;
+  document.getElementById('honey-counter').textContent =
+    `${honeyCount} hit${honeyCount !== 1 ? 's' : ''}`;
+}
+
+// ─────────────────────────────────────────────
+// Threat escalation handler
+// ─────────────────────────────────────────────
+function handleThreatEscalation(msg) {
+  const tr = ipRowMap[msg.ip];
+  if (tr) {
+    tr.classList.remove('threat-flash');
+    // Force reflow to restart animation
+    void tr.offsetWidth;
+    tr.classList.add('threat-flash');
+    // Prepend a badge to the IP cell
+    const ipCell = tr.cells[1];
+    if (!ipCell.querySelector('.threat-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'threat-badge';
+      badge.textContent = ' 🔴';
+      ipCell.appendChild(badge);
+    }
+  }
+  // Also add a dedicated row
+  const tbody = document.getElementById('honey-tbody');
+  const tr2 = document.createElement('tr');
+  tr2.style.background = '#3d0e0e';
+  tr2.innerHTML = `
+    <td colspan="8" style="color:#f85149;font-weight:700;padding:4px 10px">
+      ⚠️ THREAT ESCALATION — ${esc(msg.ip)} has hit ${msg.hit_count} times
+    </td>
+  `;
+  tbody.insertBefore(tr2, tbody.firstChild);
+}
+
+// ─────────────────────────────────────────────
+// Stats handler
+// ─────────────────────────────────────────────
+function handleStats(msg) {
+  document.getElementById('stat-total').textContent   = msg.total_hits   ?? '—';
+  document.getElementById('stat-unique').textContent  = msg.unique_ips   ?? '—';
+  document.getElementById('stat-port').textContent    = msg.top_port     ?? '—';
+  document.getElementById('stat-country').textContent = msg.top_country  ?? '—';
+  document.getElementById('stat-hour').textContent    = msg.hits_last_hour ?? '—';
+}
+
+// ─────────────────────────────────────────────
+// Scan result handler
+// ─────────────────────────────────────────────
+function handleScanResult(msg) {
+  const empty = document.getElementById('scan-empty');
+  const table = document.getElementById('scan-table');
+  const tbody = document.getElementById('scan-tbody');
+
+  tbody.innerHTML = '';
+
+  if (!msg.ports || msg.ports.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = `No open ports found on ${msg.host}.`;
+    table.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  table.style.display = 'table';
+
+  for (const p of msg.ports) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="${portRisk(p.port)}">${p.port}</td>
+      <td>${esc(p.service || '—')}</td>
+      <td style="color:#8b949e">${esc(p.version || '—')}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('scan-status').textContent =
+    `${msg.ports.length} open port${msg.ports.length !== 1 ? 's' : ''} on ${msg.host}`;
+}
+
+// ─────────────────────────────────────────────
+// Scan form
+// ─────────────────────────────────────────────
+async function triggerScan(evt) {
+  evt.preventDefault();
+  const host = document.getElementById('scan-host').value.trim();
+  if (!host) return;
+
+  const btn = document.getElementById('scan-btn');
+  const status = document.getElementById('scan-status');
+  btn.disabled = true;
+  status.textContent = `Scanning ${host}…`;
+
+  try {
+    const res = await fetch(`${API_BASE}/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    // Result arrives via WebSocket broadcast
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Webhook config form
+// ─────────────────────────────────────────────
+async function saveWebhook(evt) {
+  evt.preventDefault();
+  const url = document.getElementById('webhook-url').value.trim();
+  if (!url) return;
+  const statusEl = document.getElementById('webhook-status');
+  try {
+    const res = await fetch(`${API_BASE}/alert-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webhook_url: url }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    statusEl.textContent = '✓ Webhook saved';
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  } catch (e) {
+    statusEl.style.color = '#f85149';
+    statusEl.textContent = `Error: ${e.message}`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function portRisk(port) {
+  if ([22, 23, 3389, 445, 21].includes(port)) return 'port-risk-high';
+  if ([80, 443, 8080, 8443].includes(port))   return 'port-risk-med';
+  return 'port-risk-low';
+}
+
+function abuseColor(score) {
+  if (score == null) return '#e3b341';
+  if (score >= 70)   return '#f85149';
+  if (score >= 30)   return '#e3b341'; // orange-yellow
+  return '#e3b341';
+}
+
+function abuseClass(score) {
+  if (score == null)  return 'abuse-none';
+  if (score >= 70)    return 'abuse-high';
+  if (score >= 30)    return 'abuse-med';
+  return 'abuse-low';
+}
+
+function fmtTs(ts) {
+  return new Date(ts * 1000).toLocaleTimeString();
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// ─────────────────────────────────────────────
+// Mock data — matches the updated schema
+// Remove the setTimeout block below when backend is running
+// ─────────────────────────────────────────────
+const MOCK = [
+  { type: 'honeypot_hit', ip: '185.220.101.5', port: 8022, ts: Math.floor(Date.now()/1000)-120, lat: 52.5, lng: 13.4,  country: 'Germany',       isp: 'Tor Project', rdns: 'tor-exit.example.com', banner: null,           abuse_score: 90, hit_count: 1 },
+  { type: 'honeypot_hit', ip: '218.92.0.180',  port: 8444, ts: Math.floor(Date.now()/1000)-80,  lat: 31.0, lng: 121.0, country: 'China',         isp: 'ChinaNet',    rdns: null,                   banner: 'USER root\r\n', abuse_score: 55, hit_count: 1 },
+  { type: 'honeypot_hit', ip: '45.142.212.100',port: 8023, ts: Math.floor(Date.now()/1000)-40,  lat: 55.75,lng: 37.6,  country: 'Russia',        isp: 'Selectel',    rdns: null,                   banner: null,           abuse_score: 72, hit_count: 1 },
+  { type: 'threat_escalation', ip: '185.220.101.5', hit_count: 5, ts: Math.floor(Date.now()/1000)-10 },
+  { type: 'scan_result',  host: '127.0.0.1', ports: [
+      { port: 80,   service: 'http',  version: 'nginx 1.24' },
+      { port: 22,   service: 'ssh',   version: 'OpenSSH 8.9' },
+      { port: 3306, service: 'mysql', version: 'MySQL 8.0' },
+  ]},
+  { type: 'stats', total_hits: 42, unique_ips: 17, top_port: 8022, top_country: 'CN', hits_last_hour: 8 },
+];
+
+// Connect to live WebSocket (always)
+connectWS();
+
+// Play back mock data 600 ms after load so demo works without a backend.
+// Comment out these 3 lines to run purely on live backend data.
+setTimeout(() => {
+  MOCK.forEach((msg, i) => setTimeout(() => handleMessage(msg), i * 350));
+}, 600);
+</script>
+</body>
+</html>
