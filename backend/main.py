@@ -103,9 +103,10 @@ async def _fire_webhook(payload: dict) -> None:
             }]
         }
         async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(_webhook_url, json=discord_payload)
-    except Exception:
-        pass
+            r = await client.post(_webhook_url, json=discord_payload)
+            print(f"[webhook] Discord response: {r.status_code}")
+    except Exception as e:
+        print(f"[webhook] Error: {e}")
 
 
 # ---------------------------------------------------------------------------

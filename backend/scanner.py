@@ -23,7 +23,7 @@ _SERVICE_NAMES = {
 
 def _nmap_scan(host: str) -> list[dict]:
     nm = nmap.PortScanner()
-    nm.scan(hosts=host, arguments="-sV --open -T4")
+    nm.scan(hosts=host, arguments="-sV --open -T5 --version-intensity 0")
     results = []
     for h in nm.all_hosts():
         for proto in nm[h].all_protocols():
