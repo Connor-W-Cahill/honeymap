@@ -6,11 +6,9 @@ from typing import Callable, Awaitable
 
 from . import geo
 
-# Person A changed ports to 8022, 8023, 8444, 8445 — adopted here
 HONEYPOT_PORTS = [8022, 8023, 8444, 8445]
 
-# Fake banners to send before closing, keyed by port
-_FAKE_BANNERS: dict[int, bytes] = {
+FAKE_BANNERS: dict[int, bytes] = {
     8022: b"SSH-2.0-OpenSSH_8.9p1 Ubuntu\r\n",
     8023: b"\xff\xfd\x18",  # Telnet IAC DO TERM
     8444: b"HTTP/1.1 200 OK\r\nServer: Apache/2.4.54\r\n\r\n",
@@ -27,37 +25,36 @@ async def _handle_connection(
     addr = writer.get_extra_info("peername")
     ip = addr[0] if addr else "unknown"
 
-    # Send fake banner first (entice the attacker to send data)
-    if port in _FAKE_BANNERS:
-        try:
-            writer.write(_FAKE_BANNERS[port])
-            await writer.drain()
-        except Exception:
-            pass
+    # Send fake banner to make the honeypot look convincing
+    try:
+        writer.write(FAKE_BANNERS.get(port, b""))
+        await writer.drain()
+    except Exception:
+        pass
 
-    # Grab up to 256 bytes of attacker data
+    # Grab whatever the attacker sends back (2s window)
     banner: str | None = None
     try:
-        raw = await asyncio.wait_for(reader.read(256), timeout=2.0)
-        if raw:
-            banner = raw.decode("utf-8", errors="replace").strip() or None
+        data = await asyncio.wait_for(reader.read(256), timeout=2.0)
+        if data:
+            banner = data.decode("utf-8", errors="replace").strip() or None
     except (asyncio.TimeoutError, Exception):
         pass
 
-    writer.close()
     try:
+        writer.close()
         await writer.wait_closed()
     except Exception:
         pass
 
     # Enrich in parallel
-    geo_data, rdns_val, abuse = await asyncio.gather(
+    geo_data, hostname, score = await asyncio.gather(
         geo.lookup(ip),
         geo.rdns(ip),
         geo.abuse_score(ip),
     )
 
-    message = {
+    await broadcast({
         "type": "honeypot_hit",
         "ip": ip,
         "port": port,
@@ -66,11 +63,10 @@ async def _handle_connection(
         "lng": geo_data["lng"],
         "country": geo_data["country"],
         "isp": geo_data["isp"],
-        "rdns": rdns_val,
+        "rdns": hostname,
         "banner": banner,
-        "abuse_score": abuse,
-    }
-    await broadcast(message)
+        "abuse_score": score,
+    })
 
 
 async def start_honeypot(broadcast: Callable[[dict], Awaitable[None]]) -> None:

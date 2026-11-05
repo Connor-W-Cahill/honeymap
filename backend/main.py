@@ -6,9 +6,12 @@ import time
 from contextlib import asynccontextmanager
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+load_dotenv()
 
 from . import db, honeypot, scanner
 
@@ -87,15 +90,15 @@ async def _fire_webhook(payload: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Seed data — sent directly to each new client on connect
+# Seed data — only used when DB is empty (first ever run)
 # ---------------------------------------------------------------------------
 
 _SEED_HITS = [
-    {"ip": "185.220.101.5",  "port": 8022, "lat": 52.5,  "lng": 13.4,   "country": "Germany",        "isp": "Tor Project",  "rdns": "tor-exit.example.com", "banner": None,           "abuse_score": 90, "hit_count": 1},
-    {"ip": "218.92.0.180",   "port": 8444, "lat": 31.0,  "lng": 121.0,  "country": "China",           "isp": "ChinaNet",     "rdns": None,                   "banner": "USER root\r\n","abuse_score": 55, "hit_count": 1},
-    {"ip": "45.142.212.100", "port": 8023, "lat": 55.75, "lng": 37.6,   "country": "Russia",          "isp": "Selectel",     "rdns": None,                   "banner": None,           "abuse_score": 72, "hit_count": 1},
-    {"ip": "192.241.220.100","port": 8445, "lat": 40.7,  "lng": -74.0,  "country": "United States",   "isp": "DigitalOcean", "rdns": None,                   "banner": None,           "abuse_score": 41, "hit_count": 1},
-    {"ip": "91.108.56.130",  "port": 8022, "lat": 48.9,  "lng": 2.3,    "country": "France",          "isp": "OVH",          "rdns": None,                   "banner": None,           "abuse_score": 30, "hit_count": 1},
+    {"ip": "185.220.101.5",  "port": 8022, "lat": 52.5,  "lng": 13.4,   "country": "Germany",       "isp": "Tor Project",  "rdns": "tor-exit.for-privacy.net", "banner": None,            "abuse_score": 90, "hit_count": 1},
+    {"ip": "218.92.0.180",   "port": 8444, "lat": 31.0,  "lng": 121.0,  "country": "China",          "isp": "ChinaNet",     "rdns": None,                       "banner": "USER root\r\n", "abuse_score": 55, "hit_count": 1},
+    {"ip": "45.142.212.100", "port": 8023, "lat": 55.75, "lng": 37.6,   "country": "Russia",         "isp": "Selectel",     "rdns": None,                       "banner": None,            "abuse_score": 72, "hit_count": 1},
+    {"ip": "192.241.220.100","port": 8445, "lat": 40.7,  "lng": -74.0,  "country": "United States",  "isp": "DigitalOcean", "rdns": "scan.example.com",         "banner": None,            "abuse_score": 30, "hit_count": 1},
+    {"ip": "91.108.56.130",  "port": 8022, "lat": 48.9,  "lng": 2.3,    "country": "France",         "isp": "OVH",          "rdns": None,                       "banner": None,            "abuse_score": None, "hit_count": 1},
 ]
 
 
@@ -133,10 +136,21 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     _connections.add(ws)
 
-    # Send seed hits immediately so the map looks populated on connect
     now = int(time.time())
-    for hit in _SEED_HITS:
-        await ws.send_text(json.dumps({"type": "honeypot_hit", "ts": now, **hit}))
+
+    # Send persisted history first (replay real hits from DB)
+    history = await asyncio.to_thread(db.get_hits)
+    for hit in reversed(history):
+        await ws.send_text(json.dumps(hit))
+
+    # If DB is empty (first run), send seed hits so the map isn't blank
+    if not history:
+        for hit in _SEED_HITS:
+            await ws.send_text(json.dumps({"type": "honeypot_hit", "ts": now, **hit}))
+
+    # Send current stats
+    stats = await asyncio.to_thread(db.get_stats)
+    await ws.send_text(json.dumps(stats))
 
     try:
         while True:
@@ -159,8 +173,7 @@ async def scan(req: ScanRequest):
 
 @app.get("/hits")
 async def get_hits(limit: int = 200):
-    hits = await asyncio.to_thread(db.get_recent_hits, limit)
-    return hits
+    return await asyncio.to_thread(db.get_hits, limit)
 
 
 @app.get("/stats")

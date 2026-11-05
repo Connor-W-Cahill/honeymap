@@ -59,12 +59,16 @@ def save_hit(hit: dict) -> None:
     _get_conn().commit()
 
 
-def get_recent_hits(limit: int = 200) -> list[dict]:
-    """Return the most recent `limit` hits as dicts, newest first."""
+def get_hits(limit: int = 200) -> list[dict]:
+    """Return the most recent `limit` hits as dicts with type field, newest first."""
     rows = _get_conn().execute(
         "SELECT * FROM hits ORDER BY ts DESC LIMIT ?", (limit,)
     ).fetchall()
-    return [dict(r) for r in rows]
+    return [{"type": "honeypot_hit", **dict(r)} for r in rows]
+
+
+# Alias used by the REST endpoint
+get_recent_hits = get_hits
 
 
 def get_stats() -> dict:
@@ -74,14 +78,14 @@ def get_stats() -> dict:
     unique = conn.execute("SELECT COUNT(DISTINCT ip) FROM hits").fetchone()[0]
 
     top_port_row = conn.execute(
-        "SELECT port, COUNT(*) AS c FROM hits GROUP BY port ORDER BY c DESC LIMIT 1"
+        "SELECT port FROM hits GROUP BY port ORDER BY COUNT(*) DESC LIMIT 1"
     ).fetchone()
-    top_port = top_port_row["port"] if top_port_row else None
+    top_port = top_port_row[0] if top_port_row else None
 
     top_country_row = conn.execute(
-        "SELECT country, COUNT(*) AS c FROM hits WHERE country IS NOT NULL GROUP BY country ORDER BY c DESC LIMIT 1"
+        "SELECT country FROM hits WHERE country IS NOT NULL GROUP BY country ORDER BY COUNT(*) DESC LIMIT 1"
     ).fetchone()
-    top_country = top_country_row["country"] if top_country_row else None
+    top_country = top_country_row[0] if top_country_row else None
 
     one_hour_ago = int(time.time()) - 3600
     hits_last_hour = conn.execute(

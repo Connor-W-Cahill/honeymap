@@ -3,3 +3,4 @@ uvicorn[standard]
 python-nmap
 httpx
 websockets
+python-dotenv

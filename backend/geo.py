@@ -5,6 +5,9 @@ import os
 import socket
 
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 
 _geo_cache: dict[str, dict] = {}
 _abuse_cache: dict[str, int | None] = {}
@@ -41,8 +44,8 @@ async def lookup(ip: str) -> dict:
 async def rdns(ip: str) -> str | None:
     """Reverse DNS lookup — returns hostname string or None."""
     try:
-        result = await asyncio.to_thread(socket.gethostbyaddr, ip)
-        return result[0]
+        hostname, _, _ = await asyncio.to_thread(socket.gethostbyaddr, ip)
+        return hostname
     except Exception:
         return None
 
