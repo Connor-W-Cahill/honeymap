@@ -4,6 +4,8 @@ import time
 from contextlib import asynccontextmanager
 
 import httpx
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
