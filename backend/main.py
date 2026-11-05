@@ -43,6 +43,11 @@ async def broadcast(message: dict) -> None:
 _hit_counts: dict[str, int] = {}
 _ESCALATION_THRESHOLD = 5
 
+# Port knock tracking: ip -> list of (port, ts)
+_port_sequences: dict[str, list[tuple[int, int]]] = {}
+_PORT_KNOCK_WINDOW = 30   # seconds
+_PORT_KNOCK_MIN    = 3    # distinct ports
+
 
 async def _handle_honeypot_hit(hit: dict) -> None:
     """Persist hit, update count, broadcast hit + optional escalation + stats."""
@@ -68,6 +73,22 @@ async def _handle_honeypot_hit(hit: dict) -> None:
             "hit_count": _hit_counts[ip],
             "ts": int(time.time()),
         })
+
+    # Port knock detection
+    now = int(time.time())
+    seq = _port_sequences.setdefault(ip, [])
+    seq.append((hit["port"], now))
+    # Prune old entries outside window
+    seq[:] = [(p, t) for p, t in seq if now - t <= _PORT_KNOCK_WINDOW]
+    distinct_ports = {p for p, _ in seq}
+    if len(distinct_ports) >= _PORT_KNOCK_MIN:
+        await broadcast({
+            "type": "port_knock",
+            "ip": ip,
+            "ports": sorted(distinct_ports),
+            "ts": now,
+        })
+        _port_sequences[ip] = []  # reset so we don't spam
 
     # Broadcast updated stats after every hit
     stats = await asyncio.to_thread(db.get_stats)
@@ -227,3 +248,55 @@ async def set_alert_config(config: AlertConfig):
     global _webhook_url
     _webhook_url = config.webhook_url
     return {"status": "ok", "webhook_url": _webhook_url}
+
+
+# ── Blocklist ────────────────────────────────────────────────────────────────
+
+class BlockRequest(BaseModel):
+    ip: str
+
+@app.post("/block")
+async def block(req: BlockRequest):
+    await asyncio.to_thread(db.block_ip, req.ip)
+    await broadcast({"type": "ip_blocked", "ip": req.ip})
+    return {"status": "blocked", "ip": req.ip}
+
+@app.post("/unblock")
+async def unblock(req: BlockRequest):
+    await asyncio.to_thread(db.unblock_ip, req.ip)
+    await broadcast({"type": "ip_unblocked", "ip": req.ip})
+    return {"status": "unblocked", "ip": req.ip}
+
+@app.get("/blocklist")
+async def blocklist():
+    return {"blocked": await asyncio.to_thread(db.get_blocklist)}
+
+
+# ── Timeline ──────────────────────────────────────────────────────────────────
+
+@app.get("/hits/timeline")
+async def hits_timeline(minutes: int = 30):
+    return await asyncio.to_thread(db.get_timeline, minutes)
+
+
+# ── IP profile ───────────────────────────────────────────────────────────────
+
+@app.get("/ip/{ip}")
+async def ip_profile(ip: str):
+    hits   = await asyncio.to_thread(db.get_ip_history, ip)
+    blocked = await asyncio.to_thread(db.is_blocked, ip)
+    return {"ip": ip, "hits": hits, "blocked": blocked}
+
+
+# ── CSV export ────────────────────────────────────────────────────────────────
+
+from fastapi.responses import PlainTextResponse
+
+@app.get("/export/csv")
+async def export_csv():
+    csv_data = await asyncio.to_thread(db.export_csv)
+    return PlainTextResponse(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=honeymap-hits.csv"}
+    )

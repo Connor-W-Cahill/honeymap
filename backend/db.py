@@ -17,8 +17,9 @@ def _get_conn() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Create the hits table if it doesn't exist."""
-    _get_conn().execute("""
+    """Create tables if they don't exist."""
+    conn = _get_conn()
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS hits (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             ip          TEXT,
@@ -34,7 +35,13 @@ def init_db() -> None:
             hit_count   INTEGER
         )
     """)
-    _get_conn().commit()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS blocklist (
+            ip          TEXT PRIMARY KEY,
+            blocked_at  INTEGER
+        )
+    """)
+    conn.commit()
 
 
 def save_hit(hit: dict) -> None:
@@ -101,3 +108,56 @@ def get_stats() -> dict:
         "top_country": top_country,
         "hits_last_hour": hits_last_hour,
     }
+
+
+def block_ip(ip: str) -> None:
+    _get_conn().execute(
+        "INSERT OR REPLACE INTO blocklist (ip, blocked_at) VALUES (?, ?)",
+        (ip, int(time.time()))
+    )
+    _get_conn().commit()
+
+def unblock_ip(ip: str) -> None:
+    _get_conn().execute("DELETE FROM blocklist WHERE ip = ?", (ip,))
+    _get_conn().commit()
+
+def get_blocklist() -> list[str]:
+    rows = _get_conn().execute("SELECT ip FROM blocklist ORDER BY blocked_at DESC").fetchall()
+    return [r[0] for r in rows]
+
+def is_blocked(ip: str) -> bool:
+    row = _get_conn().execute("SELECT 1 FROM blocklist WHERE ip = ?", (ip,)).fetchone()
+    return row is not None
+
+def get_timeline(minutes: int = 30) -> list[dict]:
+    """Return hit counts per minute for the last N minutes."""
+    since = int(time.time()) - (minutes * 60)
+    with sqlite3.connect(_DB_PATH) as conn:
+        rows = conn.execute(
+            "SELECT (ts / 60) * 60 AS bucket, COUNT(*) as count FROM hits WHERE ts >= ? GROUP BY bucket ORDER BY bucket",
+            (since,)
+        ).fetchall()
+    buckets = {r[0]: r[1] for r in rows}
+    now_bucket = (int(time.time()) // 60) * 60
+    result = []
+    for i in range(minutes):
+        t = now_bucket - ((minutes - 1 - i) * 60)
+        result.append({"ts": t, "count": buckets.get(t, 0)})
+    return result
+
+def get_ip_history(ip: str) -> list[dict]:
+    """All hits from a specific IP."""
+    rows = _get_conn().execute(
+        "SELECT * FROM hits WHERE ip = ? ORDER BY ts DESC", (ip,)
+    ).fetchall()
+    return [{"type": "honeypot_hit", **dict(r)} for r in rows]
+
+def export_csv() -> str:
+    """Return all hits as a CSV string."""
+    import io, csv
+    rows = _get_conn().execute("SELECT ip,port,ts,country,isp,rdns,banner,abuse_score,hit_count FROM hits ORDER BY ts DESC").fetchall()
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["ip","port","ts","country","isp","rdns","banner","abuse_score","hit_count"])
+    w.writerows(rows)
+    return out.getvalue()

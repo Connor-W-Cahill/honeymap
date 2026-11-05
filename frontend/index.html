@@ -25,353 +25,135 @@
       --red:       #FF3B30;
       --amber:     #FFB340;
       --blue:      #4D9FFF;
+      --purple:    #A78BFA;
       --mono:      'JetBrains Mono', monospace;
       --sans:      'Inter', system-ui, sans-serif;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
     /* ── Header ── */
-    header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 0 20px;
-      height: 42px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
+    header { display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 42px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .logo { display: flex; align-items: center; gap: 9px; }
+    .logo-mark { width: 22px; height: 22px; flex-shrink: 0; }
+    header h1 { font-size: 0.9rem; font-weight: 600; letter-spacing: 0.02em; color: var(--text); }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    #ws-status { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-mid); }
+    #ws-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); transition: background 0.4s; }
+    #ws-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 4px var(--green); } 50% { box-shadow: 0 0 10px var(--green); } }
+    @media (prefers-reduced-motion: reduce) { #ws-dot.connected { animation: none; } }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-    }
-    .logo-mark {
-      width: 22px;
-      height: 22px;
-      position: relative;
-      flex-shrink: 0;
-    }
-    .logo-mark svg { display: block; }
-    header h1 {
-      font-size: 0.9rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      color: var(--text);
-    }
-
-    #ws-status {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.72rem;
-      color: var(--text-mid);
-    }
-    #ws-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--red);
-      transition: background 0.4s;
-    }
-    #ws-dot.connected {
-      background: var(--green);
-      box-shadow: 0 0 6px var(--green);
-      animation: pulse 2.4s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 4px var(--green); }
-      50%       { box-shadow: 0 0 10px var(--green); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      #ws-dot.connected { animation: none; }
-    }
+    .btn-header { background: none; border: 1px solid var(--border2); color: var(--text-mid); font-family: var(--sans); font-size: 0.72rem; padding: 4px 10px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+    .btn-header:hover { border-color: var(--green); color: var(--green); }
 
     /* ── Stats strip ── */
-    #stats-strip {
-      display: flex;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .stat-cell {
-      flex: 1;
-      padding: 10px 20px;
-      border-right: 1px solid var(--border);
-    }
+    #stats-strip { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .stat-cell { flex: 1; padding: 10px 20px; border-right: 1px solid var(--border); }
     .stat-cell:last-child { border-right: none; }
-    .stat-label {
-      font-size: 0.65rem;
-      font-weight: 500;
-      color: var(--text-dim);
-      margin-bottom: 2px;
-    }
-    .stat-value {
-      font-family: var(--mono);
-      font-size: 1.05rem;
-      font-weight: 500;
-      color: var(--green);
-      line-height: 1;
-    }
+    .stat-label { font-size: 0.65rem; font-weight: 500; color: var(--text-dim); margin-bottom: 2px; }
+    .stat-value { font-family: var(--mono); font-size: 1.05rem; font-weight: 500; color: var(--green); line-height: 1; }
+
+    /* ── Rate graph ── */
+    #rate-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 6px 20px; flex-shrink: 0; display: flex; align-items: flex-end; gap: 2px; height: 38px; }
+    .rate-bar-label { font-size: 0.6rem; color: var(--text-dim); margin-right: 6px; align-self: center; white-space: nowrap; }
+    .rate-col { flex: 1; background: var(--border); transition: height 0.3s, background 0.3s; min-height: 2px; position: relative; }
+    .rate-col.active { background: var(--green); }
 
     /* ── Main grid ── */
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-      overflow: hidden;
-    }
-
-    .panel {
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      border-right: 1px solid var(--border);
-    }
+    main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
+    .panel { background: var(--bg); display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border); }
     .panel:last-child { border-right: none; }
-
-    .panel-title {
-      padding: 9px 16px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--text-mid);
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .panel-title .dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: var(--green);
-      flex-shrink: 0;
-    }
+    .panel-title { padding: 9px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 0.72rem; font-weight: 600; color: var(--text-mid); flex-shrink: 0; display: flex; align-items: center; gap: 7px; }
+    .panel-title .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .panel-title-actions { margin-left: auto; display: flex; gap: 6px; }
 
     /* ── Forms ── */
-    .tool-row {
-      display: flex;
-      gap: 8px;
-      padding: 10px 14px;
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface2);
-    }
-    .tool-input {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border2);
-      color: var(--text);
-      padding: 6px 10px;
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
+    .tool-row { display: flex; gap: 8px; padding: 10px 14px; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .tool-input { flex: 1; background: var(--bg); border: 1px solid var(--border2); color: var(--text); padding: 6px 10px; font-family: var(--mono); font-size: 0.8rem; outline: none; transition: border-color 0.2s; }
     .tool-input:focus { border-color: var(--blue); }
     .tool-input::placeholder { color: var(--text-dim); }
-
-    .btn-primary {
-      background: var(--green);
-      border: none;
-      color: var(--bg);
-      font-family: var(--sans);
-      font-weight: 600;
-      font-size: 0.78rem;
-      padding: 6px 14px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-    }
+    .btn-primary { background: var(--green); border: none; color: var(--bg); font-family: var(--sans); font-weight: 600; font-size: 0.78rem; padding: 6px 14px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
     .btn-primary:hover { background: var(--green-dim); }
     .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    .btn-secondary {
-      background: var(--surface2);
-      border: 1px solid var(--border2);
-      color: var(--text-mid);
-      font-family: var(--sans);
-      font-weight: 500;
-      font-size: 0.78rem;
-      padding: 6px 12px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: border-color 0.15s, color 0.15s;
-    }
+    .btn-secondary { background: var(--surface2); border: 1px solid var(--border2); color: var(--text-mid); font-family: var(--sans); font-weight: 500; font-size: 0.78rem; padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: border-color 0.15s, color 0.15s; }
     .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
     .btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    .status-line {
-      padding: 4px 14px;
-      font-size: 0.71rem;
-      color: var(--text-dim);
-      flex-shrink: 0;
-      min-height: 22px;
-      font-family: var(--mono);
-    }
+    .btn-danger { background: none; border: 1px solid var(--border2); color: var(--red); font-family: var(--mono); font-size: 0.67rem; padding: 2px 7px; cursor: pointer; transition: border-color 0.15s; white-space: nowrap; }
+    .btn-danger:hover { border-color: var(--red); }
+    .btn-icon { background: none; border: 1px solid var(--border2); color: var(--text-mid); font-family: var(--mono); font-size: 0.67rem; padding: 2px 7px; cursor: pointer; transition: border-color 0.15s, color 0.15s; white-space: nowrap; }
+    .btn-icon:hover { border-color: var(--green); color: var(--green); }
+    .status-line { padding: 4px 14px; font-size: 0.71rem; color: var(--text-dim); flex-shrink: 0; min-height: 22px; font-family: var(--mono); }
+    .section-divider { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); font-size: 0.67rem; font-weight: 600; color: var(--text-dim); flex-shrink: 0; }
 
     /* ── Tables ── */
-    .table-wrap {
-      flex: 1;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border2) transparent;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.74rem;
-    }
-    thead th {
-      position: sticky;
-      top: 0;
-      background: var(--surface);
-      padding: 6px 12px;
-      text-align: left;
-      color: var(--text-dim);
-      font-weight: 500;
-      font-size: 0.67rem;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-      z-index: 1;
-    }
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-    }
+    .table-wrap { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+    thead th { position: sticky; top: 0; background: var(--surface); padding: 6px 10px; text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.67rem; border-bottom: 1px solid var(--border); white-space: nowrap; z-index: 1; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td {
-      padding: 5px 12px;
-      font-family: var(--mono);
-      font-size: 0.73rem;
-      vertical-align: middle;
-    }
+    tbody td { padding: 4px 10px; font-family: var(--mono); font-size: 0.73rem; vertical-align: middle; }
     tbody td.text { font-family: var(--sans); }
+    .trunc { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    .port-high  { color: var(--red); font-weight: 500; }
-    .port-med   { color: var(--amber); }
-    .port-low   { color: var(--green); }
-
+    .port-high { color: var(--red); font-weight: 500; }
+    .port-med  { color: var(--amber); }
+    .port-low  { color: var(--green); }
     .abuse-high { color: var(--red); font-weight: 500; }
     .abuse-med  { color: var(--amber); }
     .abuse-low  { color: var(--green); }
     .abuse-none { color: var(--text-dim); }
 
-    .trunc {
-      max-width: 100px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    /* CVE badge */
+    .cve-badge { display: inline-block; font-size: 0.6rem; padding: 1px 4px; border: 1px solid; margin-left: 4px; vertical-align: middle; }
+    .cve-critical { color: var(--red); border-color: var(--red); }
+    .cve-high     { color: var(--amber); border-color: var(--amber); }
+    .cve-medium   { color: var(--text-mid); border-color: var(--text-mid); }
 
-    #scan-empty {
-      padding: 32px 20px;
-      color: var(--text-dim);
-      font-size: 0.78rem;
-      text-align: center;
-      font-family: var(--sans);
-    }
+    /* Blocked row */
+    .row-blocked td { opacity: 0.4; text-decoration: line-through; }
+    .row-blocked td:last-child { opacity: 1; text-decoration: none; }
 
-    /* ── Scan section divider ── */
-    .section-divider {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 14px;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-      font-size: 0.67rem;
-      font-weight: 600;
-      color: var(--text-dim);
-      flex-shrink: 0;
-    }
+    #scan-empty { padding: 32px 20px; color: var(--text-dim); font-size: 0.78rem; text-align: center; font-family: var(--sans); }
 
-    /* ── Discover results ── */
+    /* ── Discover ── */
     #discover-results { display: none; flex-shrink: 0; }
-    .discover-scan-btn {
-      background: none;
-      border: 1px solid var(--border2);
-      color: var(--blue);
-      font-family: var(--mono);
-      font-size: 0.67rem;
-      padding: 2px 7px;
-      cursor: pointer;
-      transition: border-color 0.15s;
-    }
+    .discover-scan-btn { background: none; border: 1px solid var(--border2); color: var(--blue); font-family: var(--mono); font-size: 0.67rem; padding: 2px 7px; cursor: pointer; }
     .discover-scan-btn:hover { border-color: var(--blue); }
 
     /* ── Map ── */
-    #map {
-      height: 280px;
-      min-height: 280px;
-      flex-shrink: 0;
-    }
-    .leaflet-popup-content-wrapper {
-      background: var(--surface) !important;
-      color: var(--text) !important;
-      border: 1px solid var(--border2) !important;
-      border-radius: 0 !important;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
-      font-family: var(--mono) !important;
-      font-size: 0.73rem !important;
-    }
+    #map { height: 260px; min-height: 260px; flex-shrink: 0; }
+    .leaflet-popup-content-wrapper { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border2) !important; border-radius: 0 !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; font-family: var(--mono) !important; font-size: 0.73rem !important; }
     .leaflet-popup-tip { background: var(--surface) !important; }
     .leaflet-popup-close-button { color: var(--text-dim) !important; }
 
-    /* ── Hit counter ── */
-    #honey-counter {
-      padding: 4px 14px;
-      font-size: 0.67rem;
-      color: var(--text-dim);
-      font-family: var(--mono);
-      text-align: right;
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-    }
+    #honey-counter { padding: 4px 14px; font-size: 0.67rem; color: var(--text-dim); font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-bottom: 1px solid var(--border); }
 
     /* ── Animations ── */
-    @keyframes slideIn {
-      from { opacity: 0; background: rgba(0, 255, 156, 0.06); }
-      to   { opacity: 1; background: transparent; }
-    }
-    .row-new {
-      animation: slideIn 0.5s ease forwards;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .row-new { animation: none; }
-    }
+    @keyframes slideIn { from { opacity:0; background:rgba(0,255,156,0.06); } to { opacity:1; background:transparent; } }
+    .row-new { animation: slideIn 0.5s ease forwards; }
+    @media (prefers-reduced-motion: reduce) { .row-new { animation: none; } }
+    .threat-row td { border-left: 2px solid var(--red); color: var(--red); font-weight: 500; }
+    .knock-row td  { border-left: 2px solid var(--purple); color: var(--purple); font-weight: 500; }
+    @keyframes flashBorder { 0%,100% { border-left-color: var(--red); } 50% { border-left-color: transparent; } }
+    .threat-flash td:first-child { border-left: 2px solid var(--red); animation: flashBorder 0.4s ease 4; }
 
-    .threat-row td {
-      border-left: 2px solid var(--red);
-      color: var(--red);
-      font-weight: 500;
-    }
+    /* ── IP Profile Modal ── */
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
+    #modal-overlay.open { display: flex; }
+    #modal { background: var(--surface); border: 1px solid var(--border2); width: 560px; max-height: 70vh; display: flex; flex-direction: column; }
+    #modal-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 12px; flex-shrink: 0; }
+    #modal-title { font-family: var(--mono); font-size: 0.9rem; color: var(--green); flex: 1; }
+    #modal-close { background: none; border: none; color: var(--text-mid); cursor: pointer; font-size: 1rem; }
+    #modal-close:hover { color: var(--text); }
+    #modal-body { overflow-y: auto; padding: 14px 16px; flex: 1; }
+    .modal-field { margin-bottom: 8px; font-size: 0.78rem; }
+    .modal-field span { color: var(--text-dim); margin-right: 6px; font-family: var(--sans); }
+    .modal-field b { font-family: var(--mono); }
+    #modal-hits-table { margin-top: 12px; }
 
-    @keyframes flashBorder {
-      0%, 100% { border-left-color: var(--red); }
-      50%       { border-left-color: transparent; }
-    }
-    .threat-flash td:first-child {
-      border-left: 2px solid var(--red);
-      animation: flashBorder 0.4s ease 4;
-    }
+    /* ── Replay button state ── */
+    #replay-btn.replaying { color: var(--amber); border-color: var(--amber); }
   </style>
 </head>
 <body>
@@ -379,7 +161,7 @@
 <header>
   <div class="logo">
     <div class="logo-mark">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
         <circle cx="11" cy="11" r="10" stroke="#1a2440" stroke-width="1.5"/>
         <circle cx="11" cy="11" r="6" stroke="#243050" stroke-width="1"/>
         <circle cx="11" cy="11" r="2.5" fill="#00FF9C"/>
@@ -391,34 +173,27 @@
     </div>
     <h1>HoneyMap</h1>
   </div>
-
-  <div id="ws-status">
-    <div id="ws-dot"></div>
-    <span id="ws-label">Connecting</span>
+  <div class="header-actions">
+    <button class="btn-header" onclick="downloadCSV()">Export CSV</button>
+    <button class="btn-header" id="replay-btn" onclick="replaySession()">Replay</button>
+    <div id="ws-status">
+      <div id="ws-dot"></div>
+      <span id="ws-label">Connecting</span>
+    </div>
   </div>
 </header>
 
 <div id="stats-strip">
-  <div class="stat-cell">
-    <div class="stat-label">Total hits</div>
-    <div class="stat-value" id="stat-total">—</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-label">Unique IPs</div>
-    <div class="stat-value" id="stat-unique">—</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-label">Top port</div>
-    <div class="stat-value" id="stat-port">—</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-label">Top country</div>
-    <div class="stat-value" id="stat-country">—</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-label">Last hour</div>
-    <div class="stat-value" id="stat-hour">—</div>
-  </div>
+  <div class="stat-cell"><div class="stat-label">Total hits</div><div class="stat-value" id="stat-total">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Unique IPs</div><div class="stat-value" id="stat-unique">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Top port</div><div class="stat-value" id="stat-port">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Top country</div><div class="stat-value" id="stat-country">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Last hour</div><div class="stat-value" id="stat-hour">—</div></div>
+</div>
+
+<!-- Rate graph -->
+<div id="rate-bar">
+  <span class="rate-bar-label">hits/min</span>
 </div>
 
 <main>
@@ -435,9 +210,7 @@
     <div class="table-wrap">
       <div id="scan-empty">Enter a target and scan.</div>
       <table id="scan-table" style="display:none">
-        <thead>
-          <tr><th>Port</th><th>Service</th><th>Version</th></tr>
-        </thead>
+        <thead><tr><th>Port</th><th>Service</th><th>Version</th><th>CVE</th></tr></thead>
         <tbody id="scan-tbody"></tbody>
       </table>
     </div>
@@ -449,7 +222,7 @@
     </form>
     <div class="status-line" id="discover-status"></div>
     <div id="discover-results">
-      <div class="table-wrap" style="max-height:130px">
+      <div class="table-wrap" style="max-height:120px">
         <table>
           <thead><tr><th>Live host</th><th></th></tr></thead>
           <tbody id="discover-tbody"></tbody>
@@ -460,21 +233,23 @@
 
   <!-- RIGHT — Honeypot feed -->
   <div class="panel">
-    <div class="panel-title"><span class="dot"></span>Honeypot feed</div>
+    <div class="panel-title">
+      <span class="dot"></span>Honeypot feed
+      <div class="panel-title-actions">
+        <button class="btn-icon" id="heatmap-btn" onclick="toggleHeatmap()">Heatmap</button>
+      </div>
+    </div>
     <div id="map"></div>
-    <div id="honey-counter">0 hits captured</div>
+    <div id="honey-counter">
+      <span id="honey-count-text">0 hits captured</span>
+      <span id="blocked-count-text" style="color:var(--red)"></span>
+    </div>
     <div class="table-wrap" id="honey-table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Time</th>
-            <th>IP</th>
-            <th>Port</th>
-            <th>Country</th>
-            <th>ISP</th>
-            <th>rDNS</th>
-            <th>Banner</th>
-            <th>Risk</th>
+            <th>Time</th><th>IP</th><th>Port</th><th>Country</th>
+            <th>ISP</th><th>rDNS</th><th>Banner</th><th>Risk</th><th></th>
           </tr>
         </thead>
         <tbody id="honey-tbody"></tbody>
@@ -483,12 +258,49 @@
   </div>
 </main>
 
+<!-- IP Profile Modal -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <div id="modal-header">
+      <div id="modal-title">—</div>
+      <button id="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
 <script>
 const WS_URL   = 'ws://localhost:8000/ws';
 const API_BASE = 'http://localhost:8000';
 const MAX_ROWS = 50;
 
-// ── Map ──────────────────────────────────────
+// ── CVE data (loaded from backend static or inline) ──────────────────────────
+const CVE = {
+  ssh:    [{id:'CVE-2023-38408',desc:'OpenSSH agent hijack',severity:'critical'}],
+  http:   [{id:'CVE-2021-41773',desc:'Apache path traversal',severity:'critical'}],
+  https:  [{id:'CVE-2022-0778', desc:'OpenSSL infinite loop',severity:'high'}],
+  ftp:    [{id:'CVE-2022-22836',desc:'CoreFTP dir traversal',severity:'high'}],
+  telnet: [{id:'CVE-1999-0619', desc:'Cleartext credentials',severity:'critical'}],
+  smb:    [{id:'CVE-2017-0144', desc:'EternalBlue/WannaCry',severity:'critical'}],
+  rdp:    [{id:'CVE-2019-0708', desc:'BlueKeep RCE',severity:'critical'}],
+  mysql:  [{id:'CVE-2012-2122', desc:'Auth bypass',severity:'high'}],
+  redis:  [{id:'CVE-2022-0543', desc:'Lua sandbox escape',severity:'critical'}],
+  vnc:    [{id:'CVE-2006-2369', desc:'Auth bypass',severity:'high'}],
+  smtp:   [{id:'CVE-2020-28017',desc:'Exim heap overflow',severity:'critical'}],
+  dns:    [{id:'CVE-2020-1350', desc:'SIGRed Windows DNS RCE',severity:'critical'}],
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let ws = null;
+let honeyCount = 0;
+const ipRowMap  = {};
+const blockedIPs = new Set();
+let heatmapLayer = null;
+let heatmapActive = false;
+const countryCounts = {};
+let replayActive = false;
+
+// ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -496,22 +308,19 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-// ── State ────────────────────────────────────
-let ws = null;
-let honeyCount = 0;
-const ipRowMap = {};
-
-// ── WebSocket ────────────────────────────────
+// ── WebSocket ─────────────────────────────────────────────────────────────────
 function connectWS() {
   ws = new WebSocket(WS_URL);
   ws.onopen = () => {
     document.getElementById('ws-dot').classList.add('connected');
     document.getElementById('ws-label').textContent = 'Live';
     loadHistory();
+    loadBlocklist();
+    loadTimeline();
   };
   ws.onmessage = (evt) => {
     try { handleMessage(JSON.parse(evt.data)); }
-    catch (e) { console.warn('WS parse error', e); }
+    catch(e) { console.warn('WS parse error', e); }
   };
   ws.onclose = () => {
     document.getElementById('ws-dot').classList.remove('connected');
@@ -527,89 +336,264 @@ async function loadHistory() {
     if (!res.ok) return;
     const hits = await res.json();
     [...hits].reverse().forEach(h => handleHoneypotHit({ ...h, type: 'honeypot_hit' }));
-  } catch (_) {}
+  } catch(_) {}
 }
 
-// ── Router ───────────────────────────────────
+async function loadBlocklist() {
+  try {
+    const res = await fetch(`${API_BASE}/blocklist`);
+    if (!res.ok) return;
+    const data = await res.json();
+    data.blocked.forEach(ip => {
+      blockedIPs.add(ip);
+      markRowBlocked(ip);
+    });
+    updateBlockedCount();
+  } catch(_) {}
+}
+
+async function loadTimeline() {
+  try {
+    const res = await fetch(`${API_BASE}/hits/timeline?minutes=30`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderRateGraph(data);
+  } catch(_) {}
+}
+
+// ── Message router ────────────────────────────────────────────────────────────
 function handleMessage(msg) {
-  switch (msg.type) {
-    case 'honeypot_hit':      handleHoneypotHit(msg);     break;
-    case 'scan_result':       handleScanResult(msg);      break;
-    case 'threat_escalation': handleThreatEscalation(msg);break;
-    case 'stats':             handleStats(msg);           break;
-    case 'discover_host':     handleDiscoverHost(msg);    break;
-    case 'discover_done':     handleDiscoverDone(msg);    break;
+  switch(msg.type) {
+    case 'honeypot_hit':      handleHoneypotHit(msg);      break;
+    case 'scan_result':       handleScanResult(msg);       break;
+    case 'threat_escalation': handleThreatEscalation(msg); break;
+    case 'stats':             handleStats(msg);            break;
+    case 'discover_host':     handleDiscoverHost(msg);     break;
+    case 'discover_done':     handleDiscoverDone(msg);     break;
+    case 'port_knock':        handlePortKnock(msg);        break;
+    case 'ip_blocked':        onIpBlocked(msg.ip);         break;
+    case 'ip_unblocked':      onIpUnblocked(msg.ip);       break;
   }
 }
 
-// ── Honeypot hit ─────────────────────────────
+// ── Honeypot hit ──────────────────────────────────────────────────────────────
 function handleHoneypotHit(msg) {
-  if (msg.lat != null && msg.lng != null) {
+  // Track country counts for heatmap
+  if (msg.country) {
+    countryCounts[msg.country] = (countryCounts[msg.country] || 0) + 1;
+  }
+
+  // Map marker
+  if (msg.lat != null && msg.lng != null && !heatmapActive) {
     const color = riskColor(msg.abuse_score);
     const marker = L.circleMarker([msg.lat, msg.lng], {
-      radius: 5,
-      fillColor: color,
-      color: color,
-      weight: 1.5,
-      opacity: 1,
-      fillOpacity: 0.7,
+      radius: blockedIPs.has(msg.ip) ? 3 : 5,
+      fillColor: blockedIPs.has(msg.ip) ? '#333' : color,
+      color:     blockedIPs.has(msg.ip) ? '#333' : color,
+      weight: 1.5, opacity: 1, fillOpacity: 0.7,
     }).addTo(map);
     marker.bindPopup(
       `<b style="color:${color}">${esc(msg.ip)}</b><br>` +
       `Port ${msg.port} · ${esc(msg.country || '—')}<br>` +
       `${esc(msg.isp || '—')}<br>` +
       (msg.rdns ? `${esc(msg.rdns)}<br>` : '') +
-      `Risk: ${msg.abuse_score != null ? msg.abuse_score : 'unknown'}`
+      `Risk: ${msg.abuse_score ?? 'unknown'}<br>` +
+      `<small style="color:var(--blue);cursor:pointer" onclick="showProfile('${esc(msg.ip)}')">View profile</small>`
     );
   }
 
+  // Table row
   const tbody = document.getElementById('honey-tbody');
   const tr = document.createElement('tr');
   tr.className = 'row-new';
   tr.dataset.ip = msg.ip;
+  if (blockedIPs.has(msg.ip)) tr.classList.add('row-blocked');
   tr.innerHTML = `
     <td>${fmtTs(msg.ts)}</td>
-    <td>${esc(msg.ip)}${msg.hit_count > 1 ? ` <span style="color:var(--amber);font-size:0.65rem">×${msg.hit_count}</span>` : ''}</td>
+    <td><span style="cursor:pointer;color:var(--blue)" onclick="showProfile('${esc(msg.ip)}')">${esc(msg.ip)}</span>${msg.hit_count > 1 ? ` <span style="color:var(--amber);font-size:0.65rem">×${msg.hit_count}</span>` : ''}</td>
     <td>${msg.port}</td>
     <td class="text">${esc(msg.country || '—')}</td>
     <td class="trunc text">${esc(msg.isp || '—')}</td>
     <td class="trunc">${esc(msg.rdns || '—')}</td>
     <td class="trunc" style="color:var(--text-mid)">${msg.banner ? esc(msg.banner) : '<span style="color:var(--text-dim)">—</span>'}</td>
-    <td class="${abuseClass(msg.abuse_score)}">${msg.abuse_score != null ? msg.abuse_score : '—'}</td>
+    <td class="${abuseClass(msg.abuse_score)}">${msg.abuse_score ?? '—'}</td>
+    <td><button class="btn-danger" onclick="toggleBlock('${esc(msg.ip)}', this)">${blockedIPs.has(msg.ip) ? 'Unblock' : 'Block'}</button></td>
   `;
   tbody.insertBefore(tr, tbody.firstChild);
   ipRowMap[msg.ip] = tr;
   while (tbody.rows.length > MAX_ROWS) tbody.deleteRow(tbody.rows.length - 1);
 
   honeyCount++;
-  document.getElementById('honey-counter').textContent = `${honeyCount} hit${honeyCount !== 1 ? 's' : ''} captured`;
+  document.getElementById('honey-count-text').textContent = `${honeyCount} hit${honeyCount !== 1 ? 's' : ''} captured`;
 }
 
-// ── Threat escalation ─────────────────────────
+// ── Block / unblock ───────────────────────────────────────────────────────────
+async function toggleBlock(ip, btn) {
+  const blocking = !blockedIPs.has(ip);
+  try {
+    const res = await fetch(`${API_BASE}/${blocking ? 'block' : 'unblock'}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip }),
+    });
+    if (!res.ok) throw new Error();
+    // WS event will call onIpBlocked/onIpUnblocked
+  } catch(_) {}
+}
+
+function onIpBlocked(ip) {
+  blockedIPs.add(ip);
+  markRowBlocked(ip, true);
+  updateBlockedCount();
+}
+
+function onIpUnblocked(ip) {
+  blockedIPs.delete(ip);
+  markRowBlocked(ip, false);
+  updateBlockedCount();
+}
+
+function markRowBlocked(ip, blocked = true) {
+  const tr = ipRowMap[ip];
+  if (!tr) return;
+  if (blocked) {
+    tr.classList.add('row-blocked');
+    const btn = tr.querySelector('.btn-danger');
+    if (btn) btn.textContent = 'Unblock';
+  } else {
+    tr.classList.remove('row-blocked');
+    const btn = tr.querySelector('.btn-danger');
+    if (btn) btn.textContent = 'Block';
+  }
+}
+
+function updateBlockedCount() {
+  const el = document.getElementById('blocked-count-text');
+  el.textContent = blockedIPs.size > 0 ? `${blockedIPs.size} blocked` : '';
+}
+
+// ── Threat escalation ─────────────────────────────────────────────────────────
 function handleThreatEscalation(msg) {
   const existing = ipRowMap[msg.ip];
-  if (existing) {
-    existing.classList.remove('threat-flash');
-    void existing.offsetWidth;
-    existing.classList.add('threat-flash');
-  }
-  const tbody = document.getElementById('honey-tbody');
+  if (existing) { existing.classList.remove('threat-flash'); void existing.offsetWidth; existing.classList.add('threat-flash'); }
   const tr = document.createElement('tr');
   tr.className = 'threat-row';
-  tr.innerHTML = `<td colspan="8" class="text">Persistent attacker — ${esc(msg.ip)} · ${msg.hit_count} hits</td>`;
-  tbody.insertBefore(tr, tbody.firstChild);
+  tr.innerHTML = `<td colspan="9" class="text">Persistent attacker — ${esc(msg.ip)} · ${msg.hit_count} hits</td>`;
+  document.getElementById('honey-tbody').insertBefore(tr, document.getElementById('honey-tbody').firstChild);
 }
 
-// ── Stats ─────────────────────────────────────
+// ── Port knock ────────────────────────────────────────────────────────────────
+function handlePortKnock(msg) {
+  const tr = document.createElement('tr');
+  tr.className = 'knock-row';
+  tr.innerHTML = `<td colspan="9" class="text">Port scan detected — ${esc(msg.ip)} probed ports ${msg.ports.join(', ')}</td>`;
+  document.getElementById('honey-tbody').insertBefore(tr, document.getElementById('honey-tbody').firstChild);
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
 function handleStats(msg) {
   document.getElementById('stat-total').textContent   = msg.total_hits     ?? '—';
   document.getElementById('stat-unique').textContent  = msg.unique_ips     ?? '—';
   document.getElementById('stat-port').textContent    = msg.top_port       ?? '—';
   document.getElementById('stat-country').textContent = msg.top_country    ?? '—';
   document.getElementById('stat-hour').textContent    = msg.hits_last_hour ?? '—';
+  // Refresh timeline on every stats update
+  loadTimeline();
 }
 
-// ── Scan result ───────────────────────────────
+// ── Rate graph ────────────────────────────────────────────────────────────────
+function renderRateGraph(buckets) {
+  const bar = document.getElementById('rate-bar');
+  // Remove old cols, keep label
+  [...bar.querySelectorAll('.rate-col')].forEach(el => el.remove());
+  const max = Math.max(1, ...buckets.map(b => b.count));
+  const now = Math.floor(Date.now() / 60000) * 60;
+  buckets.forEach(b => {
+    const col = document.createElement('div');
+    col.className = 'rate-col' + (b.ts === now ? ' active' : '');
+    col.style.height = `${Math.max(2, (b.count / max) * 22)}px`;
+    col.title = `${b.count} hits at ${new Date(b.ts * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    bar.appendChild(col);
+  });
+}
+
+// ── Heatmap toggle ────────────────────────────────────────────────────────────
+async function toggleHeatmap() {
+  heatmapActive = !heatmapActive;
+  const btn = document.getElementById('heatmap-btn');
+  btn.style.color = heatmapActive ? 'var(--amber)' : '';
+  btn.style.borderColor = heatmapActive ? 'var(--amber)' : '';
+
+  if (heatmapLayer) { map.removeLayer(heatmapLayer); heatmapLayer = null; }
+  if (!heatmapActive) return;
+
+  // Fetch GeoJSON country borders
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson');
+    const geo = await res.json();
+    const maxCount = Math.max(1, ...Object.values(countryCounts));
+    heatmapLayer = L.geoJSON(geo, {
+      style: (feature) => {
+        const name = feature.properties.ADMIN;
+        const count = countryCounts[name] || 0;
+        const intensity = count / maxCount;
+        return {
+          fillColor: count === 0 ? 'transparent' : `rgba(255,59,48,${0.1 + intensity * 0.8})`,
+          weight: 0.5,
+          color: '#1a2440',
+          fillOpacity: 1,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const name = feature.properties.ADMIN;
+        const count = countryCounts[name] || 0;
+        if (count > 0) layer.bindPopup(`${name}: ${count} hit${count !== 1 ? 's' : ''}`);
+      }
+    }).addTo(map);
+  } catch(e) {
+    console.warn('GeoJSON load failed', e);
+    heatmapActive = false;
+  }
+}
+
+// ── Session replay ────────────────────────────────────────────────────────────
+async function replaySession() {
+  if (replayActive) return;
+  replayActive = true;
+  const btn = document.getElementById('replay-btn');
+  btn.classList.add('replaying');
+  btn.textContent = 'Replaying…';
+
+  // Clear map markers
+  map.eachLayer(layer => { if (layer instanceof L.CircleMarker) map.removeLayer(layer); });
+
+  try {
+    const res = await fetch(`${API_BASE}/hits?limit=500`);
+    if (!res.ok) throw new Error();
+    const hits = await res.json();
+    const sorted = [...hits].sort((a, b) => a.ts - b.ts);
+
+    for (let i = 0; i < sorted.length; i++) {
+      const hit = sorted[i];
+      if (hit.lat != null && hit.lng != null) {
+        const color = riskColor(hit.abuse_score);
+        const marker = L.circleMarker([hit.lat, hit.lng], {
+          radius: 6, fillColor: color, color: color,
+          weight: 2, opacity: 1, fillOpacity: 0.8,
+        }).addTo(map);
+        marker.bindPopup(`${esc(hit.ip)}<br>Port ${hit.port}`);
+        setTimeout(() => marker.setStyle({ fillOpacity: 0.4, radius: 4 }), 1000);
+      }
+      await new Promise(r => setTimeout(r, Math.max(50, 3000 / sorted.length)));
+    }
+  } catch(_) {}
+
+  btn.classList.remove('replaying');
+  btn.textContent = 'Replay';
+  replayActive = false;
+}
+
+// ── Scan result ───────────────────────────────────────────────────────────────
 function handleScanResult(msg) {
   const empty = document.getElementById('scan-empty');
   const table = document.getElementById('scan-table');
@@ -625,12 +609,18 @@ function handleScanResult(msg) {
 
   empty.style.display = 'none';
   table.style.display = 'table';
+
   for (const p of msg.ports) {
+    const cves = CVE[p.service] || [];
+    const cveBadges = cves.map(c =>
+      `<span class="cve-badge cve-${c.severity}" title="${esc(c.desc)}">${esc(c.id)}</span>`
+    ).join('');
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="${portClass(p.port)}">${p.port}</td>
-      <td class="text">${esc(p.service || '—')}</td>
+      <td class="text">${esc(p.service || '—')}${cveBadges}</td>
       <td style="color:var(--text-mid)">${esc(p.version || '—')}</td>
+      <td>${cves.length > 0 ? `<span style="color:var(--red);font-size:0.7rem">⚠ ${cves.length}</span>` : ''}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -638,56 +628,47 @@ function handleScanResult(msg) {
     `${msg.ports.length} open port${msg.ports.length !== 1 ? 's' : ''} on ${msg.host}`;
 }
 
-// ── Scan form ─────────────────────────────────
+// ── Scan form ─────────────────────────────────────────────────────────────────
 async function triggerScan(evt) {
   evt.preventDefault();
   const host = document.getElementById('scan-host').value.trim();
   if (!host) return;
-  const btn    = document.getElementById('scan-btn');
+  const btn = document.getElementById('scan-btn');
   const status = document.getElementById('scan-status');
   btn.disabled = true;
   status.textContent = `Scanning ${host}…`;
   try {
     const res = await fetch(`${API_BASE}/scan`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host }),
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({host}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  } catch (e) {
+  } catch(e) {
     status.textContent = `Scan failed: ${e.message}`;
   } finally {
     btn.disabled = false;
   }
 }
 
-// ── Discovery ─────────────────────────────────
+// ── Discovery ─────────────────────────────────────────────────────────────────
 function handleDiscoverHost(msg) {
   document.getElementById('discover-results').style.display = 'block';
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td>${esc(msg.ip)}</td>
-    <td><button class="discover-scan-btn" onclick="scanFromDiscover('${esc(msg.ip)}')">scan</button></td>
-  `;
+  tr.innerHTML = `<td>${esc(msg.ip)}</td><td><button class="discover-scan-btn" onclick="scanFromDiscover('${esc(msg.ip)}')">scan</button></td>`;
   document.getElementById('discover-tbody').appendChild(tr);
 }
-
 function handleDiscoverDone(msg) {
-  document.getElementById('discover-status').textContent =
-    `${msg.total} host${msg.total !== 1 ? 's' : ''} found on ${msg.subnet}`;
+  document.getElementById('discover-status').textContent = `${msg.total} host${msg.total !== 1 ? 's' : ''} found on ${msg.subnet}`;
   document.getElementById('discover-btn').disabled = false;
 }
-
 function scanFromDiscover(ip) {
   document.getElementById('scan-host').value = ip;
-  document.getElementById('scan-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+  document.getElementById('scan-form').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));
 }
-
 async function triggerDiscover(evt) {
   evt.preventDefault();
   const subnet = document.getElementById('discover-subnet').value.trim();
   if (!subnet) return;
-  const btn    = document.getElementById('discover-btn');
+  const btn = document.getElementById('discover-btn');
   const status = document.getElementById('discover-status');
   btn.disabled = true;
   document.getElementById('discover-tbody').innerHTML = '';
@@ -695,56 +676,105 @@ async function triggerDiscover(evt) {
   status.textContent = `Sweeping ${subnet}…`;
   try {
     const res = await fetch(`${API_BASE}/discover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subnet }),
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({subnet}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  } catch (e) {
+  } catch(e) {
     status.textContent = `Failed: ${e.message}`;
     btn.disabled = false;
   }
 }
 
-// ── Helpers ───────────────────────────────────
+// ── IP Profile Modal ──────────────────────────────────────────────────────────
+async function showProfile(ip) {
+  document.getElementById('modal-title').textContent = ip;
+  document.getElementById('modal-body').innerHTML = '<p style="color:var(--text-dim);font-size:0.8rem">Loading…</p>';
+  document.getElementById('modal-overlay').classList.add('open');
+  try {
+    const res = await fetch(`${API_BASE}/ip/${encodeURIComponent(ip)}`);
+    const data = await res.json();
+    const blocked = blockedIPs.has(ip);
+    const latest = data.hits[0] || {};
+    document.getElementById('modal-body').innerHTML = `
+      <div class="modal-field"><span>Country</span><b>${esc(latest.country || '—')}</b></div>
+      <div class="modal-field"><span>ISP</span><b>${esc(latest.isp || '—')}</b></div>
+      <div class="modal-field"><span>rDNS</span><b>${esc(latest.rdns || '—')}</b></div>
+      <div class="modal-field"><span>Abuse score</span><b class="${abuseClass(latest.abuse_score)}">${latest.abuse_score ?? '—'}</b></div>
+      <div class="modal-field"><span>Total hits</span><b>${data.hits.length}</b></div>
+      <div class="modal-field"><span>Status</span><b style="color:${blocked ? 'var(--red)' : 'var(--green)'}">${blocked ? 'Blocked' : 'Active'}</b>
+        <button class="btn-danger" style="margin-left:10px" onclick="toggleBlock('${esc(ip)}', this);closeModal()">
+          ${blocked ? 'Unblock' : 'Block'}
+        </button>
+      </div>
+      <div id="modal-hits-table">
+        <table>
+          <thead><tr><th>Time</th><th>Port</th><th>Banner</th></tr></thead>
+          <tbody>
+            ${data.hits.slice(0,20).map(h => `
+              <tr>
+                <td>${fmtTs(h.ts)}</td>
+                <td>${h.port}</td>
+                <td class="trunc">${h.banner ? esc(h.banner) : '<span style="color:var(--text-dim)">—</span>'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch(_) {
+    document.getElementById('modal-body').innerHTML = '<p style="color:var(--red)">Failed to load.</p>';
+  }
+}
+function closeModal(evt) {
+  if (evt && evt.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ── CSV export ────────────────────────────────────────────────────────────────
+function downloadCSV() {
+  window.location.href = `${API_BASE}/export/csv`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function portClass(port) {
-  if ([21, 22, 23, 445, 3389].includes(port)) return 'port-high';
-  if ([80, 443, 8080, 8443].includes(port))   return 'port-med';
+  if ([21,22,23,445,3389].includes(port)) return 'port-high';
+  if ([80,443,8080,8443].includes(port))  return 'port-med';
   return 'port-low';
 }
 function riskColor(score) {
-  if (score == null)   return 'var(--amber)';
-  if (score >= 70)     return 'var(--red)';
-  if (score >= 30)     return 'var(--amber)';
+  if (score == null) return 'var(--amber)';
+  if (score >= 70)   return 'var(--red)';
+  if (score >= 30)   return 'var(--amber)';
   return 'var(--green)';
 }
 function abuseClass(score) {
-  if (score == null)  return 'abuse-none';
-  if (score >= 70)    return 'abuse-high';
-  if (score >= 30)    return 'abuse-med';
+  if (score == null) return 'abuse-none';
+  if (score >= 70)   return 'abuse-high';
+  if (score >= 30)   return 'abuse-med';
   return 'abuse-low';
 }
 function fmtTs(ts) {
-  return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(ts * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
 function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ── Boot ──────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────────
 connectWS();
 requestAnimationFrame(() => { map.invalidateSize(); setTimeout(() => map.invalidateSize(), 500); });
 
-// Mock fallback for demo without backend
+// Mock fallback
 const MOCK = [
-  { type:'honeypot_hit', ip:'185.220.101.5', port:8022, ts:Math.floor(Date.now()/1000)-120, lat:52.5,  lng:13.4,  country:'Germany',       isp:'Tor Project', rdns:'tor-exit.example.com', banner:null,           abuse_score:90, hit_count:1 },
-  { type:'honeypot_hit', ip:'218.92.0.180',  port:8444, ts:Math.floor(Date.now()/1000)-80,  lat:31.0,  lng:121.0, country:'China',          isp:'ChinaNet',    rdns:null,                   banner:'USER root\r\n',abuse_score:55, hit_count:1 },
-  { type:'honeypot_hit', ip:'45.142.212.100',port:8023, ts:Math.floor(Date.now()/1000)-40,  lat:55.75, lng:37.6,  country:'Russia',         isp:'Selectel',    rdns:null,                   banner:null,           abuse_score:72, hit_count:1 },
-  { type:'threat_escalation', ip:'185.220.101.5', hit_count:5, ts:Math.floor(Date.now()/1000)-10 },
-  { type:'scan_result', host:'127.0.0.1', ports:[{port:80,service:'http',version:'nginx 1.24'},{port:22,service:'ssh',version:'OpenSSH 8.9'},{port:3306,service:'mysql',version:'MySQL 8.0'}]},
-  { type:'stats', total_hits:42, unique_ips:17, top_port:8022, top_country:'CN', hits_last_hour:8 },
+  {type:'honeypot_hit',ip:'185.220.101.5',port:8022,ts:Math.floor(Date.now()/1000)-120,lat:52.5,lng:13.4,country:'Germany',isp:'Tor Project',rdns:'tor-exit.example.com',banner:null,abuse_score:90,hit_count:1},
+  {type:'honeypot_hit',ip:'218.92.0.180',port:8444,ts:Math.floor(Date.now()/1000)-80,lat:31.0,lng:121.0,country:'China',isp:'ChinaNet',rdns:null,banner:'USER root\r\n',abuse_score:55,hit_count:1},
+  {type:'honeypot_hit',ip:'45.142.212.100',port:8023,ts:Math.floor(Date.now()/1000)-40,lat:55.75,lng:37.6,country:'Russia',isp:'Selectel',rdns:null,banner:null,abuse_score:72,hit_count:1},
+  {type:'threat_escalation',ip:'185.220.101.5',hit_count:5,ts:Math.floor(Date.now()/1000)-10},
+  {type:'port_knock',ip:'218.92.0.180',ports:[8022,8023,8444],ts:Math.floor(Date.now()/1000)-5},
+  {type:'scan_result',host:'127.0.0.1',ports:[{port:80,service:'http',version:'nginx 1.24'},{port:22,service:'ssh',version:'OpenSSH 8.9'},{port:3306,service:'mysql',version:'MySQL 8.0'}]},
+  {type:'stats',total_hits:42,unique_ips:17,top_port:8022,top_country:'China',hits_last_hour:8},
 ];
-setTimeout(() => { MOCK.forEach((msg, i) => setTimeout(() => handleMessage(msg), i * 350)); }, 600);
+setTimeout(() => { MOCK.forEach((msg,i) => setTimeout(() => handleMessage(msg), i*350)); }, 600);
 </script>
 </body>
 </html>
