@@ -6,220 +6,637 @@
   <title>HoneyMap</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
+    /* ── Tokens ── */
     :root {
-      --bg:        #070B14;
-      --surface:   #0C1220;
-      --surface2:  #111827;
-      --border:    #1a2440;
-      --border2:   #243050;
-      --text:      #C8D8F0;
-      --text-dim:  #4A6080;
-      --text-mid:  #7A96B8;
-      --green:     #00FF9C;
-      --green-dim: #00CC7A;
-      --red:       #FF3B30;
-      --amber:     #FFB340;
-      --blue:      #4D9FFF;
-      --purple:    #A78BFA;
+      --bg:        #05080f;
+      --surface:   #090d18;
+      --surface2:  #0d1220;
+      --surface3:  #111828;
+      --border:    #161f32;
+      --border2:   #1e2d48;
+      --text:      #c9d8f0;
+      --text-dim:  #3d5470;
+      --text-mid:  #6b87aa;
+      --green:     #00e887;
+      --green-dim: #00bc6e;
+      --green-glow:rgba(0,232,135,0.15);
+      --red:       #ff3b3b;
+      --red-dim:   rgba(255,59,59,0.12);
+      --amber:     #f5a623;
+      --blue:      #4c9fff;
+      --purple:    #9b7fe8;
       --mono:      'JetBrains Mono', monospace;
       --sans:      'Inter', system-ui, sans-serif;
+      --radius:    3px;
     }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 44px auto 1fr;
+      overflow: hidden;
+    }
 
     /* ── Header ── */
-    header { display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 42px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .logo { display: flex; align-items: center; gap: 9px; }
-    .logo-mark { width: 22px; height: 22px; flex-shrink: 0; }
-    header h1 { font-size: 0.9rem; font-weight: 600; letter-spacing: 0.02em; color: var(--text); }
-    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-    #ws-status { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-mid); }
-    #ws-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); transition: background 0.4s; }
-    #ws-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2.4s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { box-shadow: 0 0 4px var(--green); } 50% { box-shadow: 0 0 10px var(--green); } }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-right: 20px;
+      border-right: 1px solid var(--border);
+      height: 100%;
+    }
+    .logo-mark { width: 20px; height: 20px; flex-shrink: 0; }
+    .logo-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      flex: 1;
+      margin-left: 0;
+    }
+    .hstat {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 18px;
+      border-right: 1px solid var(--border);
+      min-width: 90px;
+    }
+    .hstat-label {
+      font-size: 0.58rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1px;
+    }
+    .hstat-value {
+      font-family: var(--mono);
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--green);
+      line-height: 1;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      padding-left: 16px;
+    }
+
+    #ws-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      font-size: 0.68rem;
+      color: var(--text-mid);
+    }
+    #ws-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+      transition: background 0.4s;
+      flex-shrink: 0;
+    }
+    #ws-dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 0 2px var(--green-glow);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 2px var(--green-glow); }
+      50%      { box-shadow: 0 0 0 5px var(--green-glow); }
+    }
     @media (prefers-reduced-motion: reduce) { #ws-dot.connected { animation: none; } }
 
-    .btn-header { background: none; border: 1px solid var(--border2); color: var(--text-mid); font-family: var(--sans); font-size: 0.72rem; padding: 4px 10px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
-    .btn-header:hover { border-color: var(--green); color: var(--green); }
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--text-mid);
+      font-family: var(--sans);
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 5px 12px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--green); color: var(--green); }
 
-    /* ── Stats strip ── */
-    #stats-strip { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .stat-cell { flex: 1; padding: 10px 20px; border-right: 1px solid var(--border); }
-    .stat-cell:last-child { border-right: none; }
-    .stat-label { font-size: 0.65rem; font-weight: 500; color: var(--text-dim); margin-bottom: 2px; }
-    .stat-value { font-family: var(--mono); font-size: 1.05rem; font-weight: 500; color: var(--green); line-height: 1; }
-
-    /* ── Rate graph ── */
-    #rate-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 6px 20px; flex-shrink: 0; display: flex; align-items: flex-end; gap: 2px; height: 38px; }
-    .rate-bar-label { font-size: 0.6rem; color: var(--text-dim); margin-right: 6px; align-self: center; white-space: nowrap; }
-    .rate-col { flex: 1; background: var(--border); transition: height 0.3s, background 0.3s; min-height: 2px; position: relative; }
+    /* ── Rate bar ── */
+    #rate-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      padding: 5px 16px;
+      height: 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .rate-label {
+      font-size: 0.57rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      align-self: center;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+    .rate-col {
+      flex: 1;
+      background: var(--border2);
+      border-radius: 1px;
+      min-height: 2px;
+      transition: height 0.3s, background 0.3s;
+    }
     .rate-col.active { background: var(--green); }
 
-    /* ── Main grid ── */
-    main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
-    .panel { background: var(--bg); display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border); }
-    .panel:last-child { border-right: none; }
-    .panel-title { padding: 9px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 0.72rem; font-weight: 600; color: var(--text-mid); flex-shrink: 0; display: flex; align-items: center; gap: 7px; }
-    .panel-title .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-    .panel-title-actions { margin-left: auto; display: flex; gap: 6px; }
+    /* ── Main grid: sidebar + center + right ── */
+    main {
+      display: grid;
+      grid-template-columns: 340px 1fr 320px;
+      overflow: hidden;
+    }
 
-    /* ── Forms ── */
-    .tool-row { display: flex; gap: 8px; padding: 10px 14px; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface2); }
-    .tool-input { flex: 1; background: var(--bg); border: 1px solid var(--border2); color: var(--text); padding: 6px 10px; font-family: var(--mono); font-size: 0.8rem; outline: none; transition: border-color 0.2s; }
+    /* ── Panel base ── */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+    .panel:last-child { border-right: none; }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      height: 36px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-head-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+    .panel-head-title {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-mid);
+    }
+    .panel-head-actions { margin-left: auto; display: flex; gap: 6px; }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      height: 28px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    /* ── Tool row ── */
+    .tool-row {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tool-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 6px 10px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      outline: none;
+      border-radius: var(--radius);
+      transition: border-color 0.15s;
+    }
     .tool-input:focus { border-color: var(--blue); }
     .tool-input::placeholder { color: var(--text-dim); }
-    .btn-primary { background: var(--green); border: none; color: var(--bg); font-family: var(--sans); font-weight: 600; font-size: 0.78rem; padding: 6px 14px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+
+    .btn-primary {
+      background: var(--green);
+      border: none;
+      color: var(--bg);
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 6px 14px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      white-space: nowrap;
+      transition: background 0.15s, opacity 0.15s;
+    }
     .btn-primary:hover { background: var(--green-dim); }
-    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-secondary { background: var(--surface2); border: 1px solid var(--border2); color: var(--text-mid); font-family: var(--sans); font-weight: 500; font-size: 0.78rem; padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: border-color 0.15s, color 0.15s; }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      color: var(--text-mid);
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
     .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
-    .btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-danger { background: none; border: 1px solid var(--border2); color: var(--red); font-family: var(--mono); font-size: 0.67rem; padding: 2px 7px; cursor: pointer; transition: border-color 0.15s; white-space: nowrap; }
-    .btn-danger:hover { border-color: var(--red); }
-    .btn-icon { background: none; border: 1px solid var(--border2); color: var(--text-mid); font-family: var(--mono); font-size: 0.67rem; padding: 2px 7px; cursor: pointer; transition: border-color 0.15s, color 0.15s; white-space: nowrap; }
-    .btn-icon:hover { border-color: var(--green); color: var(--green); }
-    .status-line { padding: 4px 14px; font-size: 0.71rem; color: var(--text-dim); flex-shrink: 0; min-height: 22px; font-family: var(--mono); }
-    .section-divider { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); font-size: 0.67rem; font-weight: 600; color: var(--text-dim); flex-shrink: 0; }
+    .btn-secondary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-mini {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.63rem;
+      padding: 2px 7px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-mini:hover { border-color: var(--green); color: var(--green); }
+
+    .btn-block {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--red);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      padding: 2px 7px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      white-space: nowrap;
+      transition: border-color 0.15s;
+    }
+    .btn-block:hover { border-color: var(--red); }
+
+    .status-bar {
+      padding: 4px 14px;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      flex-shrink: 0;
+      min-height: 22px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
 
     /* ── Tables ── */
-    .table-wrap { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
-    thead th { position: sticky; top: 0; background: var(--surface); padding: 6px 10px; text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.67rem; border-bottom: 1px solid var(--border); white-space: nowrap; z-index: 1; }
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      position: sticky; top: 0;
+      background: var(--surface);
+      padding: 5px 10px;
+      text-align: left;
+      color: var(--text-dim);
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      z-index: 1;
+    }
     tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td { padding: 4px 10px; font-family: var(--mono); font-size: 0.73rem; vertical-align: middle; }
-    tbody td.text { font-family: var(--sans); }
-    .trunc { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    tbody td { padding: 5px 10px; font-family: var(--mono); font-size: 0.72rem; vertical-align: middle; }
+    tbody td.sans { font-family: var(--sans); }
+    .trunc { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    .port-high { color: var(--red); font-weight: 500; }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      gap: 8px;
+    }
+    .empty-state svg { opacity: 0.2; }
+
+    /* ── Port / risk colours ── */
+    .port-high { color: var(--red); font-weight: 600; }
     .port-med  { color: var(--amber); }
     .port-low  { color: var(--green); }
-    .abuse-high { color: var(--red); font-weight: 500; }
-    .abuse-med  { color: var(--amber); }
-    .abuse-low  { color: var(--green); }
-    .abuse-none { color: var(--text-dim); }
+    .risk-high { color: var(--red); font-weight: 600; }
+    .risk-med  { color: var(--amber); }
+    .risk-low  { color: var(--green); }
+    .risk-none { color: var(--text-dim); }
 
-    /* CVE badge */
-    .cve-badge { display: inline-block; font-size: 0.6rem; padding: 1px 4px; border: 1px solid; margin-left: 4px; vertical-align: middle; }
-    .cve-critical { color: var(--red); border-color: var(--red); }
-    .cve-high     { color: var(--amber); border-color: var(--amber); }
-    .cve-medium   { color: var(--text-mid); border-color: var(--text-mid); }
+    /* ── CVE badge ── */
+    .cve-badge {
+      display: inline-block;
+      font-size: 0.58rem;
+      font-family: var(--mono);
+      padding: 1px 4px;
+      border: 1px solid;
+      border-radius: 2px;
+      margin-left: 5px;
+      vertical-align: middle;
+      cursor: default;
+    }
+    .cve-critical { color: var(--red);      border-color: rgba(255,59,59,0.5); background: rgba(255,59,59,0.07); }
+    .cve-high     { color: var(--amber);    border-color: rgba(245,166,35,0.5); background: rgba(245,166,35,0.07); }
+    .cve-medium   { color: var(--text-mid); border-color: rgba(107,135,170,0.4); background: transparent; }
 
-    /* Blocked row */
-    .row-blocked td { opacity: 0.4; text-decoration: line-through; }
+    /* ── Blocked row ── */
+    .row-blocked td { opacity: 0.35; text-decoration: line-through; }
     .row-blocked td:last-child { opacity: 1; text-decoration: none; }
 
-    #scan-empty { padding: 32px 20px; color: var(--text-dim); font-size: 0.78rem; text-align: center; font-family: var(--sans); }
+    /* ── Event rows ── */
+    @keyframes slideIn {
+      from { background: rgba(0,232,135,0.07); }
+      to   { background: transparent; }
+    }
+    .row-new { animation: slideIn 0.6s ease forwards; }
+    @media (prefers-reduced-motion: reduce) { .row-new { animation: none; } }
 
-    /* ── Discover ── */
+    .row-threat td { border-left: 2px solid var(--red); background: var(--red-dim); color: var(--red); font-weight: 500; }
+    .row-knock  td { border-left: 2px solid var(--purple); background: rgba(155,127,232,0.07); color: var(--purple); font-weight: 500; }
+
+    @keyframes flashBorder {
+      0%,100% { border-left-color: var(--red); }
+      50%      { border-left-color: transparent; }
+    }
+    .row-threat-flash td:first-child { border-left: 2px solid var(--red); animation: flashBorder 0.4s ease 4; }
+
+    /* ── Map panel (center) ── */
+    #map-panel { display: flex; flex-direction: column; overflow: hidden; }
+    #map { flex: 1; min-height: 0; }
+
+    .map-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 14px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 0.67rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      flex-shrink: 0;
+    }
+    #blocked-count { color: var(--red); }
+
+    /* ── Leaflet theme ── */
+    .leaflet-popup-content-wrapper {
+      background: var(--surface2) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border2) !important;
+      border-radius: var(--radius) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+      font-family: var(--mono) !important;
+      font-size: 0.72rem !important;
+    }
+    .leaflet-popup-tip { background: var(--surface2) !important; }
+    .leaflet-popup-close-button { color: var(--text-dim) !important; }
+    .leaflet-tile-container img { filter: brightness(0.85) saturate(0.5) hue-rotate(185deg); }
+
+    /* ── Discover results ── */
     #discover-results { display: none; flex-shrink: 0; }
-    .discover-scan-btn { background: none; border: 1px solid var(--border2); color: var(--blue); font-family: var(--mono); font-size: 0.67rem; padding: 2px 7px; cursor: pointer; }
+    .discover-scan-btn {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--blue);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      padding: 2px 7px;
+      cursor: pointer;
+      border-radius: var(--radius);
+    }
     .discover-scan-btn:hover { border-color: var(--blue); }
 
-    /* ── Map ── */
-    #map { height: 260px; min-height: 260px; flex-shrink: 0; }
-    .leaflet-popup-content-wrapper { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border2) !important; border-radius: 0 !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; font-family: var(--mono) !important; font-size: 0.73rem !important; }
-    .leaflet-popup-tip { background: var(--surface) !important; }
-    .leaflet-popup-close-button { color: var(--text-dim) !important; }
+    /* ── IP tag ── */
+    .ip-link {
+      color: var(--blue);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .ip-link:hover { text-decoration: underline; }
 
-    #honey-counter { padding: 4px 14px; font-size: 0.67rem; color: var(--text-dim); font-family: var(--mono); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-bottom: 1px solid var(--border); }
-
-    /* ── Animations ── */
-    @keyframes slideIn { from { opacity:0; background:rgba(0,255,156,0.06); } to { opacity:1; background:transparent; } }
-    .row-new { animation: slideIn 0.5s ease forwards; }
-    @media (prefers-reduced-motion: reduce) { .row-new { animation: none; } }
-    .threat-row td { border-left: 2px solid var(--red); color: var(--red); font-weight: 500; }
-    .knock-row td  { border-left: 2px solid var(--purple); color: var(--purple); font-weight: 500; }
-    @keyframes flashBorder { 0%,100% { border-left-color: var(--red); } 50% { border-left-color: transparent; } }
-    .threat-flash td:first-child { border-left: 2px solid var(--red); animation: flashBorder 0.4s ease 4; }
-
-    /* ── IP Profile Modal ── */
-    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
+    /* ── Modal ── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
     #modal-overlay.open { display: flex; }
-    #modal { background: var(--surface); border: 1px solid var(--border2); width: 560px; max-height: 70vh; display: flex; flex-direction: column; }
-    #modal-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 12px; flex-shrink: 0; }
-    #modal-title { font-family: var(--mono); font-size: 0.9rem; color: var(--green); flex: 1; }
-    #modal-close { background: none; border: none; color: var(--text-mid); cursor: pointer; font-size: 1rem; }
-    #modal-close:hover { color: var(--text); }
-    #modal-body { overflow-y: auto; padding: 14px 16px; flex: 1; }
-    .modal-field { margin-bottom: 8px; font-size: 0.78rem; }
-    .modal-field span { color: var(--text-dim); margin-right: 6px; font-family: var(--sans); }
-    .modal-field b { font-family: var(--mono); }
-    #modal-hits-table { margin-top: 12px; }
+    #modal {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      width: 540px;
+      max-height: 72vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+    }
+    #modal-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    #modal-ip {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--green);
+      flex: 1;
+    }
+    #modal-close {
+      background: none;
+      border: none;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: var(--radius);
+      transition: background 0.1s;
+    }
+    #modal-close:hover { background: var(--surface3); color: var(--text); }
+    #modal-body { overflow-y: auto; padding: 16px; flex: 1; }
 
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 20px;
+      margin-bottom: 14px;
+    }
+    .modal-field { }
+    .modal-label {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .modal-value {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+    .modal-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+    .modal-section-title {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
   </style>
 </head>
 <body>
 
+<!-- ── Header ── -->
 <header>
   <div class="logo">
-    <div class="logo-mark">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <circle cx="11" cy="11" r="10" stroke="#1a2440" stroke-width="1.5"/>
-        <circle cx="11" cy="11" r="6" stroke="#243050" stroke-width="1"/>
-        <circle cx="11" cy="11" r="2.5" fill="#00FF9C"/>
-        <line x1="11" y1="1" x2="11" y2="5" stroke="#00FF9C" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="11" y1="17" x2="11" y2="21" stroke="#1a2440" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="1" y1="11" x2="5" y2="11" stroke="#1a2440" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="17" y1="11" x2="21" y2="11" stroke="#1a2440" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <h1>HoneyMap</h1>
+    <svg class="logo-mark" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="10" r="9" stroke="#1e2d48" stroke-width="1.5"/>
+      <circle cx="10" cy="10" r="5.5" stroke="#2a3d5e" stroke-width="1"/>
+      <circle cx="10" cy="10" r="2" fill="#00e887"/>
+      <line x1="10" y1="1" x2="10" y2="4.5" stroke="#00e887" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="10" y1="15.5" x2="10" y2="19" stroke="#1e2d48" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="1" y1="10" x2="4.5" y2="10" stroke="#1e2d48" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="15.5" y1="10" x2="19" y2="10" stroke="#1e2d48" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <span class="logo-name">HoneyMap</span>
   </div>
-  <div class="header-actions">
-    <button class="btn-header" onclick="downloadCSV()">Export CSV</button>
-    <div id="ws-status">
+  <div class="header-stats">
+    <div class="hstat"><div class="hstat-label">Total hits</div><div class="hstat-value" id="stat-total">—</div></div>
+    <div class="hstat"><div class="hstat-label">Unique IPs</div><div class="hstat-value" id="stat-unique">—</div></div>
+    <div class="hstat"><div class="hstat-label">Top port</div><div class="hstat-value" id="stat-port">—</div></div>
+    <div class="hstat"><div class="hstat-label">Top country</div><div class="hstat-value" id="stat-country">—</div></div>
+    <div class="hstat"><div class="hstat-label">Last hour</div><div class="hstat-value" id="stat-hour">—</div></div>
+  </div>
+  <div class="header-right">
+    <button class="btn-ghost" onclick="downloadCSV()">Export CSV</button>
+    <div id="ws-pill">
       <div id="ws-dot"></div>
       <span id="ws-label">Connecting</span>
     </div>
   </div>
 </header>
 
-<div id="stats-strip">
-  <div class="stat-cell"><div class="stat-label">Total hits</div><div class="stat-value" id="stat-total">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Unique IPs</div><div class="stat-value" id="stat-unique">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Top port</div><div class="stat-value" id="stat-port">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Top country</div><div class="stat-value" id="stat-country">—</div></div>
-  <div class="stat-cell"><div class="stat-label">Last hour</div><div class="stat-value" id="stat-hour">—</div></div>
-</div>
-
-<!-- Rate graph -->
+<!-- ── Rate bar ── -->
 <div id="rate-bar">
-  <span class="rate-bar-label">hits/min</span>
+  <span class="rate-label">hits/min</span>
 </div>
 
+<!-- ── Three-column main ── -->
 <main>
-  <!-- LEFT — Scanner -->
+
+  <!-- LEFT: Scanner + Discovery -->
   <div class="panel">
-    <div class="panel-title"><span class="dot"></span>Port scanner</div>
+    <div class="panel-head">
+      <div class="panel-head-dot"></div>
+      <span class="panel-head-title">Port Scanner</span>
+    </div>
 
     <form class="tool-row" id="scan-form" onsubmit="triggerScan(event)">
       <input class="tool-input" id="scan-host" type="text" placeholder="IP or hostname" value="127.0.0.1" autocomplete="off" spellcheck="false" />
       <button class="btn-primary" id="scan-btn" type="submit">Scan</button>
     </form>
-    <div class="status-line" id="scan-status"></div>
+    <div class="status-bar" id="scan-status"></div>
 
     <div class="table-wrap">
-      <div id="scan-empty">Enter a target and scan.</div>
+      <div class="empty-state" id="scan-empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Enter a target and scan
+      </div>
       <table id="scan-table" style="display:none">
         <thead><tr><th>Port</th><th>Service</th><th>Version</th><th>CVE</th></tr></thead>
         <tbody id="scan-tbody"></tbody>
       </table>
     </div>
 
-    <div class="section-divider">Network discovery</div>
+    <div class="divider">Network Discovery</div>
     <form class="tool-row" id="discover-form" onsubmit="triggerDiscover(event)">
       <input class="tool-input" id="discover-subnet" type="text" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false" />
       <button class="btn-secondary" id="discover-btn" type="submit">Sweep</button>
     </form>
-    <div class="status-line" id="discover-status"></div>
+    <div class="status-bar" id="discover-status"></div>
     <div id="discover-results">
-      <div class="table-wrap" style="max-height:120px">
+      <div class="table-wrap" style="max-height: 130px">
         <table>
           <thead><tr><th>Live host</th><th></th></tr></thead>
           <tbody id="discover-tbody"></tbody>
@@ -228,38 +645,47 @@
     </div>
   </div>
 
-  <!-- RIGHT — Honeypot feed -->
-  <div class="panel">
-    <div class="panel-title">
-      <span class="dot"></span>Honeypot feed
-      <div class="panel-title-actions">
-        <button class="btn-icon" id="heatmap-btn" onclick="toggleHeatmap()">Heatmap</button>
+  <!-- CENTER: Map -->
+  <div id="map-panel">
+    <div class="panel-head" style="border-right:1px solid var(--border)">
+      <div class="panel-head-dot"></div>
+      <span class="panel-head-title">Live Map</span>
+      <div class="panel-head-actions">
+        <button class="btn-mini" id="heatmap-btn" onclick="toggleHeatmap()">Heatmap</button>
       </div>
     </div>
     <div id="map"></div>
-    <div id="honey-counter">
-      <span id="honey-count-text">0 hits captured</span>
-      <span id="blocked-count-text" style="color:var(--red)"></span>
+    <div class="map-footer">
+      <span id="hit-count-text">0 hits captured</span>
+      <span id="blocked-count"></span>
+    </div>
+  </div>
+
+  <!-- RIGHT: Honeypot feed -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-head-dot"></div>
+      <span class="panel-head-title">Honeypot Feed</span>
     </div>
     <div class="table-wrap" id="honey-table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Time</th><th>IP</th><th>Port</th><th>Country</th>
-            <th>ISP</th><th>rDNS</th><th>Banner</th><th>Risk</th><th></th>
+            <th>Time</th><th>IP</th><th>Port</th><th>Country</th><th>Risk</th><th></th>
           </tr>
         </thead>
         <tbody id="honey-tbody"></tbody>
       </table>
     </div>
   </div>
+
 </main>
 
-<!-- IP Profile Modal -->
+<!-- ── IP Profile Modal ── -->
 <div id="modal-overlay" onclick="closeModal(event)">
   <div id="modal">
     <div id="modal-header">
-      <div id="modal-title">—</div>
+      <div id="modal-ip">—</div>
       <button id="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div id="modal-body"></div>
@@ -271,9 +697,7 @@ const WS_URL   = 'ws://localhost:8000/ws';
 const API_BASE = 'http://localhost:8000';
 const MAX_ROWS = 50;
 
-// ── CVE data ─────────────────────────────────────────────────────────────────
-// product: substring matched against nmap version string (case-insensitive)
-// fixed_version: last vulnerable version (null = affects all known versions)
+// ── CVE data ──────────────────────────────────────────────────────────────────
 const CVE = {
   ssh:    [{id:'CVE-2023-38408',desc:'OpenSSH agent hijack',        severity:'critical',product:'OpenSSH',      fixed:'9.3p2'}],
   http:   [{id:'CVE-2021-41773',desc:'Apache path traversal',       severity:'critical',product:'Apache httpd', fixed:'2.4.50'},
@@ -301,48 +725,36 @@ const CVE = {
            {id:'CVE-2021-25216',desc:'BIND9 buffer overflow',       severity:'critical',product:'BIND',         fixed:'9.11.31'}],
 };
 
-// Parse a version string like "2.4.49", "9.3p1", "1.0.1e" into a comparable tuple.
 function _parseVer(v) {
-  // split on dots and non-numeric suffixes; keep numeric parts only
-  return String(v).split(/[.\-_]/).map(p => {
-    const n = parseInt(p, 10);
-    return isNaN(n) ? 0 : n;
-  });
+  return String(v).split(/[.\-_]/).map(p => { const n = parseInt(p,10); return isNaN(n) ? 0 : n; });
 }
-
-// Returns true if detectedVer <= fixedVer (i.e. still in vulnerable range).
 function _verVulnerable(detected, fixed) {
-  const a = _parseVer(detected);
-  const b = _parseVer(fixed);
+  const a = _parseVer(detected), b = _parseVer(fixed);
   const len = Math.max(a.length, b.length);
   for (let i = 0; i < len; i++) {
-    const ai = a[i] || 0, bi = b[i] || 0;
-    if (ai < bi) return true;   // older than fixed → vulnerable
-    if (ai > bi) return false;  // newer than fixed → patched
+    const ai = a[i]||0, bi = b[i]||0;
+    if (ai < bi) return true;
+    if (ai > bi) return false;
   }
-  return true; // equal to fixed_version means still vulnerable (fix is *after* this)
+  return true;
 }
-
-// Given a CVE entry and the nmap version string, return true if the CVE applies.
 function cveMatch(cve, versionStr) {
-  if (!versionStr) return false;            // no version info → can't confirm
-  if (!cve.product) return true;            // protocol-level CVE (telnet, rdp) — always show
+  if (!versionStr) return false;
+  if (!cve.product) return true;
   const v = versionStr.toLowerCase();
-  const prod = cve.product.toLowerCase();
-  if (!v.includes(prod.split(' ')[0])) return false;  // product not present in version string
-  if (!cve.fixed) return true;              // no fixed version known → assume vulnerable
-  // Extract the version number portion after the product name
-  const numMatch = versionStr.match(/(\d[\d.\-_p]+)/);
-  if (!numMatch) return true;               // has the product but no parseable version → show it
-  return _verVulnerable(numMatch[1], cve.fixed);
+  if (!v.includes(cve.product.toLowerCase().split(' ')[0])) return false;
+  if (!cve.fixed) return true;
+  const m = versionStr.match(/(\d[\d.\-_p]+)/);
+  if (!m) return true;
+  return _verVulnerable(m[1], cve.fixed);
 }
 
-// ── State ────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 let ws = null;
 let honeyCount = 0;
-const ipRowMap  = {};
+const ipRowMap   = {};
 const blockedIPs = new Set();
-let heatmapLayer = null;
+let heatmapLayer  = null;
 let heatmapActive = false;
 const countryCounts = {};
 
@@ -365,8 +777,7 @@ function connectWS() {
     loadTimeline();
   };
   ws.onmessage = (evt) => {
-    try { handleMessage(JSON.parse(evt.data)); }
-    catch(e) { console.warn('WS parse error', e); }
+    try { handleMessage(JSON.parse(evt.data)); } catch(e) { console.warn('WS parse error', e); }
   };
   ws.onclose = () => {
     document.getElementById('ws-dot').classList.remove('connected');
@@ -384,26 +795,20 @@ async function loadHistory() {
     [...hits].reverse().forEach(h => handleHoneypotHit({ ...h, type: 'honeypot_hit' }));
   } catch(_) {}
 }
-
 async function loadBlocklist() {
   try {
     const res = await fetch(`${API_BASE}/blocklist`);
     if (!res.ok) return;
     const data = await res.json();
-    data.blocked.forEach(ip => {
-      blockedIPs.add(ip);
-      markRowBlocked(ip);
-    });
+    data.blocked.forEach(ip => { blockedIPs.add(ip); markRowBlocked(ip); });
     updateBlockedCount();
   } catch(_) {}
 }
-
 async function loadTimeline() {
   try {
     const res = await fetch(`${API_BASE}/hits/timeline?minutes=30`);
     if (!res.ok) return;
-    const data = await res.json();
-    renderRateGraph(data);
+    renderRateGraph(await res.json());
   } catch(_) {}
 }
 
@@ -424,66 +829,60 @@ function handleMessage(msg) {
 
 // ── Honeypot hit ──────────────────────────────────────────────────────────────
 function handleHoneypotHit(msg) {
-  // Track country counts for heatmap
-  if (msg.country) {
-    countryCounts[msg.country] = (countryCounts[msg.country] || 0) + 1;
-  }
+  if (msg.country) countryCounts[msg.country] = (countryCounts[msg.country] || 0) + 1;
 
-  // Map marker
   if (msg.lat != null && msg.lng != null && !heatmapActive) {
     const color = riskColor(msg.abuse_score);
+    const blocked = blockedIPs.has(msg.ip);
     const marker = L.circleMarker([msg.lat, msg.lng], {
-      radius: blockedIPs.has(msg.ip) ? 3 : 5,
-      fillColor: blockedIPs.has(msg.ip) ? '#333' : color,
-      color:     blockedIPs.has(msg.ip) ? '#333' : color,
-      weight: 1.5, opacity: 1, fillOpacity: 0.7,
+      radius: blocked ? 3 : 5,
+      fillColor: blocked ? '#1e2d48' : color,
+      color:     blocked ? '#1e2d48' : color,
+      weight: 1.5, opacity: 1, fillOpacity: blocked ? 0.5 : 0.75,
     }).addTo(map);
     marker.bindPopup(
       `<b style="color:${color}">${esc(msg.ip)}</b><br>` +
-      `Port ${msg.port} · ${esc(msg.country || '—')}<br>` +
+      `Port <b>${msg.port}</b> · ${esc(msg.country || '—')}<br>` +
       `${esc(msg.isp || '—')}<br>` +
       (msg.rdns ? `${esc(msg.rdns)}<br>` : '') +
-      `Risk: ${msg.abuse_score ?? 'unknown'}<br>` +
-      `<small style="color:var(--blue);cursor:pointer" onclick="showProfile('${esc(msg.ip)}')">View profile</small>`
+      `Risk: <b>${msg.abuse_score ?? 'unknown'}</b><br>` +
+      `<span style="color:var(--blue);cursor:pointer" onclick="showProfile('${esc(msg.ip)}')">▸ View profile</span>`
     );
   }
 
-  // Table row
   const tbody = document.getElementById('honey-tbody');
   const tr = document.createElement('tr');
   tr.className = 'row-new';
   tr.dataset.ip = msg.ip;
   if (blockedIPs.has(msg.ip)) tr.classList.add('row-blocked');
+
+  const riskCls = abuseClass(msg.abuse_score);
   tr.innerHTML = `
     <td>${fmtTs(msg.ts)}</td>
-    <td><span style="cursor:pointer;color:var(--blue)" onclick="showProfile('${esc(msg.ip)}')">${esc(msg.ip)}</span>${msg.hit_count > 1 ? ` <span style="color:var(--amber);font-size:0.65rem">×${msg.hit_count}</span>` : ''}</td>
-    <td>${msg.port}</td>
-    <td class="text">${esc(msg.country || '—')}</td>
-    <td class="trunc text">${esc(msg.isp || '—')}</td>
-    <td class="trunc">${esc(msg.rdns || '—')}</td>
-    <td class="trunc" style="color:var(--text-mid)">${msg.banner ? esc(msg.banner) : '<span style="color:var(--text-dim)">—</span>'}</td>
-    <td class="${abuseClass(msg.abuse_score)}">${msg.abuse_score ?? '—'}</td>
-    <td><button class="btn-danger" onclick="toggleBlock('${esc(msg.ip)}', this)">${blockedIPs.has(msg.ip) ? 'Unblock' : 'Block'}</button></td>
+    <td><span class="ip-link" onclick="showProfile('${esc(msg.ip)}')">${esc(msg.ip)}</span>${msg.hit_count > 1 ? ` <span style="color:var(--amber);font-size:0.62rem">×${msg.hit_count}</span>` : ''}</td>
+    <td class="${portClass(msg.port)}">${msg.port}</td>
+    <td class="sans trunc">${esc(msg.country || '—')}</td>
+    <td class="${riskCls}">${msg.abuse_score ?? '—'}</td>
+    <td><button class="btn-block" onclick="toggleBlock('${esc(msg.ip)}', this)">${blockedIPs.has(msg.ip) ? 'Unblock' : 'Block'}</button></td>
   `;
   tbody.insertBefore(tr, tbody.firstChild);
   ipRowMap[msg.ip] = tr;
   while (tbody.rows.length > MAX_ROWS) tbody.deleteRow(tbody.rows.length - 1);
 
   honeyCount++;
-  document.getElementById('honey-count-text').textContent = `${honeyCount} hit${honeyCount !== 1 ? 's' : ''} captured`;
+  document.getElementById('hit-count-text').textContent = `${honeyCount} hit${honeyCount !== 1 ? 's' : ''} captured`;
 }
 
-// ── Block / unblock ───────────────────────────────────────────────────────────
+// ── Block / Unblock ───────────────────────────────────────────────────────────
 async function toggleBlock(ip, btn) {
   const blocking = !blockedIPs.has(ip);
   try {
     const res = await fetch(`${API_BASE}/${blocking ? 'block' : 'unblock'}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip }),
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ip}),
     });
     if (!res.ok) throw new Error();
-    // WS event will call onIpBlocked/onIpUnblocked
   } catch(_) {}
 }
 
@@ -492,47 +891,38 @@ function onIpBlocked(ip) {
   markRowBlocked(ip, true);
   updateBlockedCount();
 }
-
 function onIpUnblocked(ip) {
   blockedIPs.delete(ip);
   markRowBlocked(ip, false);
   updateBlockedCount();
 }
-
 function markRowBlocked(ip, blocked = true) {
   const tr = ipRowMap[ip];
   if (!tr) return;
-  if (blocked) {
-    tr.classList.add('row-blocked');
-    const btn = tr.querySelector('.btn-danger');
-    if (btn) btn.textContent = 'Unblock';
-  } else {
-    tr.classList.remove('row-blocked');
-    const btn = tr.querySelector('.btn-danger');
-    if (btn) btn.textContent = 'Block';
-  }
+  const btn = tr.querySelector('.btn-block');
+  if (blocked) { tr.classList.add('row-blocked'); if (btn) btn.textContent = 'Unblock'; }
+  else         { tr.classList.remove('row-blocked'); if (btn) btn.textContent = 'Block'; }
 }
-
 function updateBlockedCount() {
-  const el = document.getElementById('blocked-count-text');
+  const el = document.getElementById('blocked-count');
   el.textContent = blockedIPs.size > 0 ? `${blockedIPs.size} blocked` : '';
 }
 
 // ── Threat escalation ─────────────────────────────────────────────────────────
 function handleThreatEscalation(msg) {
   const existing = ipRowMap[msg.ip];
-  if (existing) { existing.classList.remove('threat-flash'); void existing.offsetWidth; existing.classList.add('threat-flash'); }
+  if (existing) { existing.classList.remove('row-threat-flash'); void existing.offsetWidth; existing.classList.add('row-threat-flash'); }
   const tr = document.createElement('tr');
-  tr.className = 'threat-row';
-  tr.innerHTML = `<td colspan="9" class="text">Persistent attacker — ${esc(msg.ip)} · ${msg.hit_count} hits</td>`;
+  tr.className = 'row-threat';
+  tr.innerHTML = `<td colspan="6" class="sans">⚠ Persistent attacker — ${esc(msg.ip)} · ${msg.hit_count} hits</td>`;
   document.getElementById('honey-tbody').insertBefore(tr, document.getElementById('honey-tbody').firstChild);
 }
 
 // ── Port knock ────────────────────────────────────────────────────────────────
 function handlePortKnock(msg) {
   const tr = document.createElement('tr');
-  tr.className = 'knock-row';
-  tr.innerHTML = `<td colspan="9" class="text">Port scan detected — ${esc(msg.ip)} probed ports ${msg.ports.join(', ')}</td>`;
+  tr.className = 'row-knock';
+  tr.innerHTML = `<td colspan="6" class="sans">◈ Port scan — ${esc(msg.ip)} probed ${msg.ports.join(', ')}</td>`;
   document.getElementById('honey-tbody').insertBefore(tr, document.getElementById('honey-tbody').firstChild);
 }
 
@@ -543,61 +933,49 @@ function handleStats(msg) {
   document.getElementById('stat-port').textContent    = msg.top_port       ?? '—';
   document.getElementById('stat-country').textContent = msg.top_country    ?? '—';
   document.getElementById('stat-hour').textContent    = msg.hits_last_hour ?? '—';
-  // Refresh timeline on every stats update
   loadTimeline();
 }
 
 // ── Rate graph ────────────────────────────────────────────────────────────────
 function renderRateGraph(buckets) {
   const bar = document.getElementById('rate-bar');
-  // Remove old cols, keep label
   [...bar.querySelectorAll('.rate-col')].forEach(el => el.remove());
   const max = Math.max(1, ...buckets.map(b => b.count));
   const now = Math.floor(Date.now() / 60000) * 60;
   buckets.forEach(b => {
     const col = document.createElement('div');
     col.className = 'rate-col' + (b.ts === now ? ' active' : '');
-    col.style.height = `${Math.max(2, (b.count / max) * 22)}px`;
-    col.title = `${b.count} hits at ${new Date(b.ts * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    col.style.height = `${Math.max(2, (b.count / max) * 18)}px`;
+    col.title = `${b.count} hits at ${new Date(b.ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
     bar.appendChild(col);
   });
 }
 
-// ── Heatmap toggle ────────────────────────────────────────────────────────────
+// ── Heatmap ───────────────────────────────────────────────────────────────────
 async function toggleHeatmap() {
   heatmapActive = !heatmapActive;
   const btn = document.getElementById('heatmap-btn');
   btn.style.color = heatmapActive ? 'var(--amber)' : '';
   btn.style.borderColor = heatmapActive ? 'var(--amber)' : '';
-
   if (heatmapLayer) { map.removeLayer(heatmapLayer); heatmapLayer = null; }
   if (!heatmapActive) return;
-
-  // Fetch GeoJSON country borders
   try {
     const res = await fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson');
     const geo = await res.json();
     const maxCount = Math.max(1, ...Object.values(countryCounts));
     heatmapLayer = L.geoJSON(geo, {
-      style: (feature) => {
-        const name = feature.properties.ADMIN;
-        const count = countryCounts[name] || 0;
-        const intensity = count / maxCount;
-        return {
-          fillColor: count === 0 ? 'transparent' : `rgba(255,59,48,${0.1 + intensity * 0.8})`,
-          weight: 0.5,
-          color: '#1a2440',
-          fillOpacity: 1,
-        };
+      style: (f) => {
+        const count = countryCounts[f.properties.ADMIN] || 0;
+        const i = count / maxCount;
+        return { fillColor: count === 0 ? 'transparent' : `rgba(255,59,59,${0.1 + i * 0.8})`, weight: 0.5, color: '#1e2d48', fillOpacity: 1 };
       },
-      onEachFeature: (feature, layer) => {
-        const name = feature.properties.ADMIN;
-        const count = countryCounts[name] || 0;
-        if (count > 0) layer.bindPopup(`${name}: ${count} hit${count !== 1 ? 's' : ''}`);
+      onEachFeature: (f, layer) => {
+        const count = countryCounts[f.properties.ADMIN] || 0;
+        if (count > 0) layer.bindPopup(`${f.properties.ADMIN}: ${count} hit${count!==1?'s':''}`);
       }
     }).addTo(map);
   } catch(e) {
-    console.warn('GeoJSON load failed', e);
+    console.warn('GeoJSON failed', e);
     heatmapActive = false;
   }
 }
@@ -608,17 +986,15 @@ function handleScanResult(msg) {
   const table = document.getElementById('scan-table');
   const tbody = document.getElementById('scan-tbody');
   tbody.innerHTML = '';
-
   if (!msg.ports || msg.ports.length === 0) {
-    empty.style.display = 'block';
-    empty.textContent = `No open ports on ${msg.host}.`;
+    empty.style.display = 'flex';
+    empty.querySelector('span') ? null : null;
+    empty.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> No open ports on ${esc(msg.host)}`;
     table.style.display = 'none';
     return;
   }
-
   empty.style.display = 'none';
   table.style.display = 'table';
-
   for (const p of msg.ports) {
     const allCves = CVE[p.service] || [];
     const cves = allCves.filter(c => cveMatch(c, p.version));
@@ -628,14 +1004,14 @@ function handleScanResult(msg) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="${portClass(p.port)}">${p.port}</td>
-      <td class="text">${esc(p.service || '—')}${cveBadges}</td>
-      <td style="color:var(--text-mid)">${esc(p.version || '—')}</td>
-      <td>${cves.length > 0 ? `<span style="color:var(--red);font-size:0.7rem">⚠ ${cves.length}</span>` : ''}</td>
+      <td class="sans">${esc(p.service||'—')}${cveBadges}</td>
+      <td style="color:var(--text-mid);font-size:0.68rem">${esc(p.version||'—')}</td>
+      <td>${cves.length > 0 ? `<span style="color:var(--red);font-size:0.68rem">⚠ ${cves.length}</span>` : ''}</td>
     `;
     tbody.appendChild(tr);
   }
   document.getElementById('scan-status').textContent =
-    `${msg.ports.length} open port${msg.ports.length !== 1 ? 's' : ''} on ${msg.host}`;
+    `${msg.ports.length} open port${msg.ports.length!==1?'s':''} on ${msg.host}`;
 }
 
 // ── Scan form ─────────────────────────────────────────────────────────────────
@@ -649,7 +1025,7 @@ async function triggerScan(evt) {
   status.textContent = `Scanning ${host}…`;
   try {
     const res = await fetch(`${API_BASE}/scan`, {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({host}),
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({host}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   } catch(e) {
@@ -667,7 +1043,7 @@ function handleDiscoverHost(msg) {
   document.getElementById('discover-tbody').appendChild(tr);
 }
 function handleDiscoverDone(msg) {
-  document.getElementById('discover-status').textContent = `${msg.total} host${msg.total !== 1 ? 's' : ''} found on ${msg.subnet}`;
+  document.getElementById('discover-status').textContent = `${msg.total} host${msg.total!==1?'s':''} found on ${msg.subnet}`;
   document.getElementById('discover-btn').disabled = false;
 }
 function scanFromDiscover(ip) {
@@ -679,26 +1055,25 @@ async function triggerDiscover(evt) {
   const subnet = document.getElementById('discover-subnet').value.trim();
   if (!subnet) return;
   const btn = document.getElementById('discover-btn');
-  const status = document.getElementById('discover-status');
   btn.disabled = true;
   document.getElementById('discover-tbody').innerHTML = '';
   document.getElementById('discover-results').style.display = 'none';
-  status.textContent = `Sweeping ${subnet}…`;
+  document.getElementById('discover-status').textContent = `Sweeping ${subnet}…`;
   try {
     const res = await fetch(`${API_BASE}/discover`, {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({subnet}),
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({subnet}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   } catch(e) {
-    status.textContent = `Failed: ${e.message}`;
+    document.getElementById('discover-status').textContent = `Failed: ${e.message}`;
     btn.disabled = false;
   }
 }
 
 // ── IP Profile Modal ──────────────────────────────────────────────────────────
 async function showProfile(ip) {
-  document.getElementById('modal-title').textContent = ip;
-  document.getElementById('modal-body').innerHTML = '<p style="color:var(--text-dim);font-size:0.8rem">Loading…</p>';
+  document.getElementById('modal-ip').textContent = ip;
+  document.getElementById('modal-body').innerHTML = '<p style="color:var(--text-dim);font-size:0.78rem;padding:8px 0">Loading…</p>';
   document.getElementById('modal-overlay').classList.add('open');
   try {
     const res = await fetch(`${API_BASE}/ip/${encodeURIComponent(ip)}`);
@@ -706,33 +1081,33 @@ async function showProfile(ip) {
     const blocked = blockedIPs.has(ip);
     const latest = data.hits[0] || {};
     document.getElementById('modal-body').innerHTML = `
-      <div class="modal-field"><span>Country</span><b>${esc(latest.country || '—')}</b></div>
-      <div class="modal-field"><span>ISP</span><b>${esc(latest.isp || '—')}</b></div>
-      <div class="modal-field"><span>rDNS</span><b>${esc(latest.rdns || '—')}</b></div>
-      <div class="modal-field"><span>Abuse score</span><b class="${abuseClass(latest.abuse_score)}">${latest.abuse_score ?? '—'}</b></div>
-      <div class="modal-field"><span>Total hits</span><b>${data.hits.length}</b></div>
-      <div class="modal-field"><span>Status</span><b style="color:${blocked ? 'var(--red)' : 'var(--green)'}">${blocked ? 'Blocked' : 'Active'}</b>
-        <button class="btn-danger" style="margin-left:10px" onclick="toggleBlock('${esc(ip)}', this);closeModal()">
-          ${blocked ? 'Unblock' : 'Block'}
-        </button>
+      <div class="modal-grid">
+        <div class="modal-field"><div class="modal-label">Country</div><div class="modal-value">${esc(latest.country||'—')}</div></div>
+        <div class="modal-field"><div class="modal-label">ISP</div><div class="modal-value">${esc(latest.isp||'—')}</div></div>
+        <div class="modal-field"><div class="modal-label">rDNS</div><div class="modal-value">${esc(latest.rdns||'—')}</div></div>
+        <div class="modal-field"><div class="modal-label">Abuse score</div><div class="modal-value ${abuseClass(latest.abuse_score)}">${latest.abuse_score??'—'}</div></div>
+        <div class="modal-field"><div class="modal-label">Total hits</div><div class="modal-value">${data.hits.length}</div></div>
+        <div class="modal-field"><div class="modal-label">Status</div><div class="modal-value" style="color:${blocked?'var(--red)':'var(--green)'}">${blocked?'Blocked':'Active'}</div></div>
       </div>
-      <div id="modal-hits-table">
-        <table>
-          <thead><tr><th>Time</th><th>Port</th><th>Banner</th></tr></thead>
-          <tbody>
-            ${data.hits.slice(0,20).map(h => `
-              <tr>
-                <td>${fmtTs(h.ts)}</td>
-                <td>${h.port}</td>
-                <td class="trunc">${h.banner ? esc(h.banner) : '<span style="color:var(--text-dim)">—</span>'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+      <div class="modal-actions">
+        <button class="btn-block" onclick="toggleBlock('${esc(ip)}',this);closeModal()">${blocked?'Unblock':'Block'}</button>
       </div>
+      <div class="modal-section-title">Hit history</div>
+      <table>
+        <thead><tr><th>Time</th><th>Port</th><th>Banner</th></tr></thead>
+        <tbody>
+          ${data.hits.slice(0,20).map(h=>`
+            <tr>
+              <td>${fmtTs(h.ts)}</td>
+              <td class="${portClass(h.port)}">${h.port}</td>
+              <td class="trunc sans">${h.banner?esc(h.banner):'<span style="color:var(--text-dim)">—</span>'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     `;
   } catch(_) {
-    document.getElementById('modal-body').innerHTML = '<p style="color:var(--red)">Failed to load.</p>';
+    document.getElementById('modal-body').innerHTML = '<p style="color:var(--red);padding:8px 0">Failed to load.</p>';
   }
 }
 function closeModal(evt) {
@@ -740,10 +1115,8 @@ function closeModal(evt) {
   document.getElementById('modal-overlay').classList.remove('open');
 }
 
-// ── CSV export ────────────────────────────────────────────────────────────────
-function downloadCSV() {
-  window.location.href = `${API_BASE}/export/csv`;
-}
+// ── CSV ───────────────────────────────────────────────────────────────────────
+function downloadCSV() { window.location.href = `${API_BASE}/export/csv`; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function portClass(port) {
@@ -758,13 +1131,13 @@ function riskColor(score) {
   return 'var(--green)';
 }
 function abuseClass(score) {
-  if (score == null) return 'abuse-none';
-  if (score >= 70)   return 'abuse-high';
-  if (score >= 30)   return 'abuse-med';
-  return 'abuse-low';
+  if (score == null) return 'risk-none';
+  if (score >= 70)   return 'risk-high';
+  if (score >= 30)   return 'risk-med';
+  return 'risk-low';
 }
 function fmtTs(ts) {
-  return new Date(ts * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  return new Date(ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -774,11 +1147,11 @@ function esc(str) {
 connectWS();
 requestAnimationFrame(() => { map.invalidateSize(); setTimeout(() => map.invalidateSize(), 500); });
 
-// Mock fallback
+// Mock fallback (demo without backend)
 const MOCK = [
-  {type:'honeypot_hit',ip:'185.220.101.5',port:8022,ts:Math.floor(Date.now()/1000)-120,lat:52.5,lng:13.4,country:'Germany',isp:'Tor Project',rdns:'tor-exit.example.com',banner:null,abuse_score:90,hit_count:1},
-  {type:'honeypot_hit',ip:'218.92.0.180',port:8444,ts:Math.floor(Date.now()/1000)-80,lat:31.0,lng:121.0,country:'China',isp:'ChinaNet',rdns:null,banner:'USER root\r\n',abuse_score:55,hit_count:1},
-  {type:'honeypot_hit',ip:'45.142.212.100',port:8023,ts:Math.floor(Date.now()/1000)-40,lat:55.75,lng:37.6,country:'Russia',isp:'Selectel',rdns:null,banner:null,abuse_score:72,hit_count:1},
+  {type:'honeypot_hit',ip:'185.220.101.5', port:8022,ts:Math.floor(Date.now()/1000)-120,lat:52.5, lng:13.4,  country:'Germany',      isp:'Tor Project', rdns:'tor-exit.example.com',banner:null,          abuse_score:90,hit_count:1},
+  {type:'honeypot_hit',ip:'218.92.0.180',  port:8444,ts:Math.floor(Date.now()/1000)-80, lat:31.0, lng:121.0, country:'China',         isp:'ChinaNet',    rdns:null,                  banner:'USER root\r\n',abuse_score:55,hit_count:1},
+  {type:'honeypot_hit',ip:'45.142.212.100',port:8023,ts:Math.floor(Date.now()/1000)-40, lat:55.75,lng:37.6,  country:'Russia',        isp:'Selectel',    rdns:null,                  banner:null,          abuse_score:72,hit_count:1},
   {type:'threat_escalation',ip:'185.220.101.5',hit_count:5,ts:Math.floor(Date.now()/1000)-10},
   {type:'port_knock',ip:'218.92.0.180',ports:[8022,8023,8444],ts:Math.floor(Date.now()/1000)-5},
   {type:'scan_result',host:'127.0.0.1',ports:[{port:80,service:'http',version:'nginx 1.24'},{port:22,service:'ssh',version:'OpenSSH 8.9'},{port:3306,service:'mysql',version:'MySQL 8.0'}]},
