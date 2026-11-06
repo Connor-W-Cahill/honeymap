@@ -12,18 +12,22 @@ except ImportError:
 
 
 # Ports to probe in fallback mode
-_FALLBACK_PORTS = [21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 3306, 3389, 8080, 8443]
+_FALLBACK_PORTS = [21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 3306, 3389, 8022, 8023, 8080, 8443, 8444, 8445]
 
 _SERVICE_NAMES = {
     21: "ftp", 22: "ssh", 23: "telnet", 25: "smtp", 53: "dns",
     80: "http", 110: "pop3", 143: "imap", 443: "https", 445: "smb",
-    3306: "mysql", 3389: "rdp", 8080: "http-alt", 8443: "https-alt",
+    3306: "mysql", 3389: "rdp", 8022: "ssh", 8023: "telnet",
+    8080: "http-alt", 8443: "https-alt", 8444: "http-alt", 8445: "http-alt",
 }
+
+# Scan the top 1000 ports plus the honeypot ports explicitly
+_SCAN_PORTS = "1-1024,3306,3389,8022,8023,8080,8443,8444,8445"
 
 
 def _nmap_scan(host: str) -> list[dict]:
     nm = nmap.PortScanner()
-    nm.scan(hosts=host, arguments="-sV --open -T5 --version-intensity 0")
+    nm.scan(hosts=host, arguments=f"-sV --open -T5 --version-intensity 0 -p {_SCAN_PORTS}")
     results = []
     for h in nm.all_hosts():
         for proto in nm[h].all_protocols():
