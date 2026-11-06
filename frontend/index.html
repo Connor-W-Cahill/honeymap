@@ -274,21 +274,71 @@ const WS_URL   = 'ws://localhost:8000/ws';
 const API_BASE = 'http://localhost:8000';
 const MAX_ROWS = 50;
 
-// ── CVE data (loaded from backend static or inline) ──────────────────────────
+// ── CVE data ─────────────────────────────────────────────────────────────────
+// product: substring matched against nmap version string (case-insensitive)
+// fixed_version: last vulnerable version (null = affects all known versions)
 const CVE = {
-  ssh:    [{id:'CVE-2023-38408',desc:'OpenSSH agent hijack',severity:'critical'}],
-  http:   [{id:'CVE-2021-41773',desc:'Apache path traversal',severity:'critical'}],
-  https:  [{id:'CVE-2022-0778', desc:'OpenSSL infinite loop',severity:'high'}],
-  ftp:    [{id:'CVE-2022-22836',desc:'CoreFTP dir traversal',severity:'high'}],
-  telnet: [{id:'CVE-1999-0619', desc:'Cleartext credentials',severity:'critical'}],
-  smb:    [{id:'CVE-2017-0144', desc:'EternalBlue/WannaCry',severity:'critical'}],
-  rdp:    [{id:'CVE-2019-0708', desc:'BlueKeep RCE',severity:'critical'}],
-  mysql:  [{id:'CVE-2012-2122', desc:'Auth bypass',severity:'high'}],
-  redis:  [{id:'CVE-2022-0543', desc:'Lua sandbox escape',severity:'critical'}],
-  vnc:    [{id:'CVE-2006-2369', desc:'Auth bypass',severity:'high'}],
-  smtp:   [{id:'CVE-2020-28017',desc:'Exim heap overflow',severity:'critical'}],
-  dns:    [{id:'CVE-2020-1350', desc:'SIGRed Windows DNS RCE',severity:'critical'}],
+  ssh:    [{id:'CVE-2023-38408',desc:'OpenSSH agent hijack',        severity:'critical',product:'OpenSSH',      fixed:'9.3p2'}],
+  http:   [{id:'CVE-2021-41773',desc:'Apache path traversal',       severity:'critical',product:'Apache httpd', fixed:'2.4.50'},
+           {id:'CVE-2021-42013',desc:'Apache path traversal bypass',severity:'critical',product:'Apache httpd', fixed:'2.4.51'}],
+  https:  [{id:'CVE-2022-0778', desc:'OpenSSL infinite loop',       severity:'high',    product:'OpenSSL',      fixed:'3.0.2'},
+           {id:'CVE-2014-0160', desc:'Heartbleed',                  severity:'critical',product:'OpenSSL',      fixed:'1.0.1g'}],
+  ftp:    [{id:'CVE-2022-22836',desc:'CoreFTP dir traversal',       severity:'high',    product:'CoreFTP',      fixed:'2.0'}],
+  telnet: [{id:'CVE-1999-0619', desc:'Cleartext credentials',       severity:'critical',product:null,           fixed:null}],
+  smb:    [{id:'CVE-2017-0144', desc:'EternalBlue/WannaCry',        severity:'critical',product:'Samba',        fixed:'4.6.4'},
+           {id:'CVE-2017-7494', desc:'SambaCry RCE',                severity:'critical',product:'Samba',        fixed:'4.6.4'}],
+  rdp:    [{id:'CVE-2019-0708', desc:'BlueKeep RCE',                severity:'critical',product:null,           fixed:null},
+           {id:'CVE-2019-1182', desc:'DejaBlue RCE',                severity:'critical',product:null,           fixed:null}],
+  mysql:  [{id:'CVE-2012-2122', desc:'Auth bypass via timing',      severity:'high',    product:'MySQL',        fixed:'5.6.6'},
+           {id:'CVE-2016-6662', desc:'Config file injection',       severity:'critical',product:'MySQL',        fixed:'5.7.15'}],
+  'ms-sql':[{id:'CVE-2020-0618',desc:'SSRS RCE',                   severity:'critical',product:'Microsoft SQL', fixed:null}],
+  vnc:    [{id:'CVE-2006-2369', desc:'RealVNC auth bypass',         severity:'high',    product:'RealVNC',      fixed:'4.1.2'},
+           {id:'CVE-2019-15694',desc:'TigerVNC buffer overflow',    severity:'high',    product:'TigerVNC',     fixed:'1.10.1'}],
+  redis:  [{id:'CVE-2022-0543', desc:'Lua sandbox escape',          severity:'critical',product:'Redis',        fixed:'6.2.7'}],
+  mongodb:[{id:'CVE-2013-4650', desc:'No auth by default',          severity:'medium',  product:'MongoDB',      fixed:'2.4.6'}],
+  pop3:   [{id:'CVE-2003-0161', desc:'Sendmail buffer overflow',    severity:'high',    product:'Sendmail',     fixed:'8.12.9'}],
+  imap:   [{id:'CVE-2021-33582',desc:'Cyrus IMAP DoS',              severity:'medium',  product:'Cyrus IMAP',   fixed:'3.4.3'}],
+  smtp:   [{id:'CVE-2020-28017',desc:'Exim heap overflow',          severity:'critical',product:'Exim',         fixed:'4.94.2'},
+           {id:'CVE-2021-27135',desc:'Postfix SMTP smuggling',      severity:'medium',  product:'Postfix',      fixed:'3.5.14'}],
+  dns:    [{id:'CVE-2020-1350', desc:'SIGRed Windows DNS RCE',      severity:'critical',product:'Microsoft DNS', fixed:null},
+           {id:'CVE-2021-25216',desc:'BIND9 buffer overflow',       severity:'critical',product:'BIND',         fixed:'9.11.31'}],
 };
+
+// Parse a version string like "2.4.49", "9.3p1", "1.0.1e" into a comparable tuple.
+function _parseVer(v) {
+  // split on dots and non-numeric suffixes; keep numeric parts only
+  return String(v).split(/[.\-_]/).map(p => {
+    const n = parseInt(p, 10);
+    return isNaN(n) ? 0 : n;
+  });
+}
+
+// Returns true if detectedVer <= fixedVer (i.e. still in vulnerable range).
+function _verVulnerable(detected, fixed) {
+  const a = _parseVer(detected);
+  const b = _parseVer(fixed);
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const ai = a[i] || 0, bi = b[i] || 0;
+    if (ai < bi) return true;   // older than fixed → vulnerable
+    if (ai > bi) return false;  // newer than fixed → patched
+  }
+  return true; // equal to fixed_version means still vulnerable (fix is *after* this)
+}
+
+// Given a CVE entry and the nmap version string, return true if the CVE applies.
+function cveMatch(cve, versionStr) {
+  if (!versionStr) return false;            // no version info → can't confirm
+  if (!cve.product) return true;            // protocol-level CVE (telnet, rdp) — always show
+  const v = versionStr.toLowerCase();
+  const prod = cve.product.toLowerCase();
+  if (!v.includes(prod.split(' ')[0])) return false;  // product not present in version string
+  if (!cve.fixed) return true;              // no fixed version known → assume vulnerable
+  // Extract the version number portion after the product name
+  const numMatch = versionStr.match(/(\d[\d.\-_p]+)/);
+  if (!numMatch) return true;               // has the product but no parseable version → show it
+  return _verVulnerable(numMatch[1], cve.fixed);
+}
 
 // ── State ────────────────────────────────────────────────────────────────────
 let ws = null;
@@ -611,7 +661,8 @@ function handleScanResult(msg) {
   table.style.display = 'table';
 
   for (const p of msg.ports) {
-    const cves = CVE[p.service] || [];
+    const allCves = CVE[p.service] || [];
+    const cves = allCves.filter(c => cveMatch(c, p.version));
     const cveBadges = cves.map(c =>
       `<span class="cve-badge cve-${c.severity}" title="${esc(c.desc)}">${esc(c.id)}</span>`
     ).join('');
