@@ -152,8 +152,6 @@
     .modal-field b { font-family: var(--mono); }
     #modal-hits-table { margin-top: 12px; }
 
-    /* ── Replay button state ── */
-    #replay-btn.replaying { color: var(--amber); border-color: var(--amber); }
   </style>
 </head>
 <body>
@@ -175,7 +173,6 @@
   </div>
   <div class="header-actions">
     <button class="btn-header" onclick="downloadCSV()">Export CSV</button>
-    <button class="btn-header" id="replay-btn" onclick="replaySession()">Replay</button>
     <div id="ws-status">
       <div id="ws-dot"></div>
       <span id="ws-label">Connecting</span>
@@ -348,7 +345,6 @@ const blockedIPs = new Set();
 let heatmapLayer = null;
 let heatmapActive = false;
 const countryCounts = {};
-let replayActive = false;
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
@@ -604,43 +600,6 @@ async function toggleHeatmap() {
     console.warn('GeoJSON load failed', e);
     heatmapActive = false;
   }
-}
-
-// ── Session replay ────────────────────────────────────────────────────────────
-async function replaySession() {
-  if (replayActive) return;
-  replayActive = true;
-  const btn = document.getElementById('replay-btn');
-  btn.classList.add('replaying');
-  btn.textContent = 'Replaying…';
-
-  // Clear map markers
-  map.eachLayer(layer => { if (layer instanceof L.CircleMarker) map.removeLayer(layer); });
-
-  try {
-    const res = await fetch(`${API_BASE}/hits?limit=500`);
-    if (!res.ok) throw new Error();
-    const hits = await res.json();
-    const sorted = [...hits].sort((a, b) => a.ts - b.ts);
-
-    for (let i = 0; i < sorted.length; i++) {
-      const hit = sorted[i];
-      if (hit.lat != null && hit.lng != null) {
-        const color = riskColor(hit.abuse_score);
-        const marker = L.circleMarker([hit.lat, hit.lng], {
-          radius: 6, fillColor: color, color: color,
-          weight: 2, opacity: 1, fillOpacity: 0.8,
-        }).addTo(map);
-        marker.bindPopup(`${esc(hit.ip)}<br>Port ${hit.port}`);
-        setTimeout(() => marker.setStyle({ fillOpacity: 0.4, radius: 4 }), 1000);
-      }
-      await new Promise(r => setTimeout(r, Math.max(50, 3000 / sorted.length)));
-    }
-  } catch(_) {}
-
-  btn.classList.remove('replaying');
-  btn.textContent = 'Replay';
-  replayActive = false;
 }
 
 // ── Scan result ───────────────────────────────────────────────────────────────
