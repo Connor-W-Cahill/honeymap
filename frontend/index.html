@@ -953,30 +953,50 @@ function renderRateGraph(buckets) {
 
 // ── Heatmap ───────────────────────────────────────────────────────────────────
 async function toggleHeatmap() {
-  heatmapActive = !heatmapActive;
+  // If already active, turn off
+  if (heatmapActive) {
+    heatmapActive = false;
+    if (heatmapLayer) { map.removeLayer(heatmapLayer); heatmapLayer = null; }
+    const btn = document.getElementById('heatmap-btn');
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    btn.textContent = 'Heatmap';
+    return;
+  }
+
   const btn = document.getElementById('heatmap-btn');
-  btn.style.color = heatmapActive ? 'var(--amber)' : '';
-  btn.style.borderColor = heatmapActive ? 'var(--amber)' : '';
-  if (heatmapLayer) { map.removeLayer(heatmapLayer); heatmapLayer = null; }
-  if (!heatmapActive) return;
+  btn.textContent = 'Loading…';
+  btn.style.color = 'var(--text-dim)';
+
   try {
     const res = await fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const geo = await res.json();
     const maxCount = Math.max(1, ...Object.values(countryCounts));
     heatmapLayer = L.geoJSON(geo, {
       style: (f) => {
         const count = countryCounts[f.properties.ADMIN] || 0;
         const i = count / maxCount;
-        return { fillColor: count === 0 ? 'transparent' : `rgba(255,59,59,${0.1 + i * 0.8})`, weight: 0.5, color: '#1e2d48', fillOpacity: 1 };
+        return {
+          fillColor: count === 0 ? 'transparent' : `rgba(255,59,59,${0.1 + i * 0.8})`,
+          weight: 0.5, color: '#1e2d48', fillOpacity: 1,
+        };
       },
       onEachFeature: (f, layer) => {
         const count = countryCounts[f.properties.ADMIN] || 0;
         if (count > 0) layer.bindPopup(`${f.properties.ADMIN}: ${count} hit${count!==1?'s':''}`);
       }
     }).addTo(map);
+    heatmapActive = true;
+    btn.style.color = 'var(--amber)';
+    btn.style.borderColor = 'var(--amber)';
+    btn.textContent = 'Heatmap';
   } catch(e) {
     console.warn('GeoJSON failed', e);
-    heatmapActive = false;
+    btn.style.color = 'var(--red)';
+    btn.style.borderColor = '';
+    btn.textContent = 'Failed';
+    setTimeout(() => { btn.style.color = ''; btn.textContent = 'Heatmap'; }, 2500);
   }
 }
 
